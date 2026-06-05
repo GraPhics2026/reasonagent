@@ -1,0 +1,12 @@
+{
+  "score": 1.0,
+  "passed": [
+    "Is the sky visible through the window dark (nighttime) instead of blue?",
+    "Is the potted plant still located on the left side of the windowsill?",
+    "Is there a single leaf lying on the floor in the foreground?",
+    "Are the sheer white curtains still present on the right side of the window?",
+    "Does the lighting in the room appear cool and dim (moonlight) rather than bright sunlight?"
+  ],
+  "errors": [],
+  "summary": "The image successfully transforms the scene to nighttime with a starry sky, cool moonlight, and all key objects preserved in their correct positions."
+}

@@ -1,0 +1,4 @@
+Reasoning type: physical
+Visual cues from source image: Camera viewpoint: Eye-level view facing the bouquet directly.; Spatial positions: Bouquet is in the CENTER foreground; Window is in the LEFT background; Wooden table occupies the BOTTOM half.; Dominant color palette: Deep reds and pinks (flowers), dark green (ribbon/leaves), warm brown (table), soft white/beige (background).; Lighting quality + direction: Bright natural sunlight streaming from the LEFT, casting distinct shadows to the RIGHT.
+Expected physical/causal outcome: The single central mass splits into two smaller masses.; The binding ribbon is removed or separated, no longer holding all stems together.; Shadows on the table will shift from a single central shadow to two distinct shadows corresponding to the new positions of the bouquets.; The total volume of flowers remains constant, just distributed differently.
+Must preserve: wooden table, window, background wall, lighting conditions, camera angle

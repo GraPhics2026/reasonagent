@@ -1,4 +1,0 @@
-Reasoning type: physical
-Visual cues from source image: A man wearing a light blue button-up shirt, khaki pants, and white sneakers.; A golden retriever sitting on green grass next to the man.; Two wooden park benches in the background near trees and a waterfront.; Clear blue sky and bright daylight indicating a sunny summer day.
-Expected physical/causal outcome: The green grass will be replaced by a layer of fresh white snow.; Footprints from many people will crisscross the snow-covered ground.; The man and dog will appear bundled up in winter clothing due to colder temperatures.; The trees will have bare branches or light snow on their limbs.
-Must preserve: man's pose and position, dog's pose and position, park benches, trees, waterfront view

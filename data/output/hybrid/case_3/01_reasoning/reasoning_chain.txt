@@ -1,0 +1,5 @@
+Step 1: Observe the current scene: a bright, sunlit room with a large window on the right showing a blue sky with clouds. A potted plant sits on the left side of the windowsill, and a single leaf lies on the floor in the foreground. The walls are light blue, and sheer white curtains hang on the right.
+
+Step 2: Infer the counterfactual change: The instruction asks to transform the time of day from midday to late night. This implies removing the sunlight, changing the sky view to darkness/stars, and altering the lighting quality to cool, dim moonlight.
+
+Step 3: Derive the visual outcome: The physical objects (plant, pot, leaf, window frame, curtains) must remain in their exact positions with their original materials and colors, but they will appear darker and cast different shadows due to the new light source (moonlight). The sky outside becomes black/dark blue.

@@ -1,0 +1,5 @@
+Step 1: Observe the current state: a single bouquet of mixed red and pink roses tied with a green ribbon, standing on a wooden table near a window.
+
+Step 2: Infer the counterfactual change: The instruction asks to split this single arrangement into two independent bouquets. This implies physically separating the stems into two distinct groups and removing or adjusting the binding ribbon so they stand apart.
+
+Step 3: Derive the visual outcome: Two separate bunches of roses will occupy the space previously held by one. They should be positioned side-by-side (e.g., left and right) on the same wooden surface, maintaining the original lighting and background context.

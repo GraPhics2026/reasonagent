@@ -65,6 +65,18 @@ Include these style cues in your visual_cues list:
 - Surface materials and textures (e.g. "rustic wood grain", "matte ceramic", "glossy glass")
 - Overall atmosphere (e.g. "serene and quiet", "bright and lively", "cozy indoor warmth")
 
+CRITICAL — hybrid mode person identity preservation:
+Since T2I generates from scratch with no image reference, person appearance is ENTIRELY
+determined by the text description. T2I models have strong training bias toward
+Caucasian/white faces. To preserve the original person's identity, you MUST describe:
+- Race/ethnicity: "East Asian man", "Chinese man", "Black woman" — NOT just "man"/"woman"
+- Skin tone: "light skin with warm undertone", "olive complexion", "dark brown skin"
+- Facial features: "round face, almond-shaped eyes", "broad nose, full lips"
+- Hair: texture, color, style (e.g. "curly black hair", "straight dark brown hair")
+- Body build: "lean build", "stocky build", "tall and slender"
+These details MUST appear in both visual_cues AND scene_prompt. Without them, T2I will
+generate a completely different person with default Caucasian features.
+
 CRITICAL for hybrid mode — scene_prompt is a STANDALONE T2I prompt:
 It will be sent directly to an image generator WITHOUT the original image.
 Therefore scene_prompt MUST describe the ENTIRE scene from scratch, NOT just the changed parts.
@@ -85,6 +97,7 @@ RULES (violating any of these will produce bad results):
    - Plant: leaf shape, count, size, color, growth direction
    - Curtains: fabric, color, how they hang, which side of window
    - Any other objects visible (leaf, furniture, decorations)
+   - **PEOPLE: race/ethnicity, skin tone, facial features, hair, body build**
 2. DO NOT INVENT OBJECTS that are not in the original image. No "bedside lamp",
    no "framed picture on wall", no "breeze" unless they actually exist in the
    original image. If an object is not in the image, do NOT describe it.
@@ -93,7 +106,8 @@ RULES (violating any of these will produce bad results):
      walls, windowsill, pot, plant, leaf, curtains — SAME materials, colors,
      shapes, positions as the original.
    - For "split into two bouquets": change ONLY the count and arrangement of
-     flowers. Table, light, background — SAME as original.
+     flowers. Keep the SAME flower type, color, and size for both bouquets.
+     Table, light, background — SAME as original.
    - For "add many people": ADD people but keep ALL original elements identical.
 4. The first sentence of scene_prompt must establish the camera perspective
    (e.g. "An eye-level photograph of a room...")

@@ -14,15 +14,15 @@ Return strict JSON only:
     "Step 3: derive the expected visual outcome and what must stay unchanged."
   ],
   "visual_cues": [
-    "fine-grained visual facts from the image relevant to the edit (material, state, position, relations). For hybrid mode, MUST include: (a) camera viewpoint and perspective (eye-level / low angle / high angle, viewing direction); (b) spatial positions of all subjects using LEFT/RIGHT/CENTER/FOREGROUND/BACKGROUND labels; (c) dominant color palette; (d) lighting quality + direction; (e) surface materials/textures; (f) overall atmosphere. These anchor T2I generation to the original scene's visual identity and spatial composition."
+    "fine-grained visual facts from the image relevant to the edit (material, state, position, relations). For hybrid mode, MUST include: (a) camera viewpoint and perspective (eye-level / low angle / high angle, viewing direction); (b) spatial positions of all subjects using LEFT/RIGHT/CENTER/FOREGROUND/BACKGROUND labels; (c) dominant color palette; (d) lighting quality + direction; (e) surface materials/textures; (f) overall atmosphere; (g) FOR PEOPLE: race/ethnicity (e.g. East Asian/Chinese/Caucasian), skin tone (e.g. light/olive/tan), facial features, hair texture/color, approximate age, body build. These anchor T2I generation to the original scene's visual identity and spatial composition."
   ],
   "physics_implications": [
     "concrete visual consequences implied by physics/causality/time/story reasoning"
   ],
   "target_objects": ["objects or regions that should change"],
-  "preserve_objects": ["objects, background, or layout that must remain unchanged"],
+  "preserve_objects": ["objects, background, or layout that must remain unchanged. FOR PEOPLE: include race/ethnicity, skin tone, facial features, hair, body build — these MUST be preserved exactly."],
   "edit_prompt": "Concise English instruction for an image+text editor. Describe the target appearance after the hypothetical change.",
-  "scene_prompt": "ONLY for hybrid mode. A complete, self-contained English description of the ENTIRE scene after the change, suitable as a standalone text-to-image prompt. Must include ALL subjects (people, animals, objects), their attributes (clothing, color, pose), spatial layout, background, and atmosphere — not just the changed elements. Read it aloud: it should paint the full picture.",
+  "scene_prompt": "ONLY for hybrid mode. A complete, self-contained English description of the ENTIRE scene after the change, suitable as a standalone text-to-image prompt. Must include ALL subjects (people, animals, objects), their attributes (clothing, color, pose), spatial layout, background, and atmosphere — not just the changed elements. FOR PEOPLE: MUST specify race/ethnicity (e.g. 'East Asian man' not just 'man'), skin tone, facial features, hair texture/color. This is CRITICAL — T2I models default to Caucasian without explicit race specification. Read it aloud: it should paint the full picture.",
   "vqa_checklist": [
     {"q": "A yes/no visual check about the edited result.", "expected": "yes"}
   ]
@@ -40,12 +40,14 @@ Rules:
 3. visual_cues must come from the actual image, not generic guesses.
 4. physics_implications must state what should visibly change (not abstract reasoning prose).
 5. preserve_objects must list elements that should keep identity and appearance unless the instruction requires changing them.
-6. vqa_checklist: 2-4 items, each checkable from the edited image alone; include at least one physics/causal check when relevant.
-7. Return JSON only, no markdown fences.
+6. FOR PEOPLE in the image: scene_prompt MUST describe their race/ethnicity, skin tone, facial features, hair, and body build. T2I models have strong default biases — without explicit description, they will generate Caucasian faces even when the original person is Asian/Black/etc. This is the #1 cause of identity loss in hybrid generation.
+7. vqa_checklist: 2-4 items, each checkable from the edited image alone; include at least one physics/causal check when relevant.
+8. Return JSON only, no markdown fences.
 
 CRITICAL for scene_prompt (hybrid mode):
 - scene_prompt IS A STANDALONE T2I PROMPT. It must describe the WHOLE scene, not just the changed parts.
 - WRITE A FORENSIC-LEVEL DESCRIPTION of the original image. Describe every surface and object precisely: floor material/color/texture, wall color/finish, window frame/size/panes, windowsill material/width, plant pot shape/size/color, leaf position/size, curtain fabric/hang — all with exact positions (LEFT/CENTER/RIGHT/FOREGROUND/BACKGROUND).
+- **CRITICAL FOR PEOPLE: When describing any person, you MUST specify: (1) race/ethnicity — e.g. "East Asian man", "Chinese man", "Black woman", NOT just "man"/"woman"; (2) skin tone — e.g. "light skin with warm undertone", "dark brown skin"; (3) facial features — e.g. "round face, almond-shaped eyes, black hair"; (4) hair — texture, color, style. Without these details, T2I models default to generating white/Caucasian people due to training data bias. This is the #1 cause of identity loss.
 - DO NOT INVENT objects not requested by the instruction. No "lamp", "picture frame", "breeze" unless the instruction explicitly asks for them.
 - **CRITICAL: IF THE INSTRUCTION REQUESTS ADDING ELEMENTS, YOU MUST ADD THEM.** For example:
   - If instruction says "人很多" (many people) → scene_prompt MUST describe "many people walking, sitting on benches, children playing, couples strolling" etc.

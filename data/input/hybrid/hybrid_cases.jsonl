@@ -1,4 +1,4 @@
 {"image": "data/input/hybrid/person_dog_park.png", "instruction": "如果公园里人很多，地面被雪覆盖会怎样？", "note": "temporal/weather full scene regeneration; environment overhaul"}
 {"image": "data/input/hybrid/bouquet.png", "instruction": "如果这一束花分成两束独立的玫瑰，会是什么样子？", "note": "physical/recomposition full scene; object count & spatial layout change"}
 {"image": "data/input/hybrid/sunny_indoor.png", "instruction": "如果这间阳光明媚的房间突然变成深夜，会是什么样子？", "note": "temporal day-to-night; full atmosphere switch"}
-{"image": "data/input/hybrid/park_day.png", "instruction": "如果现在是秋天，树叶全部变红变黄，地面上铺满落叶会怎样？", "note": "temporal/seasonal full scene; colour palette and ground cover change"}
+{"image": "data/input/hybrid/person_dog_park.png", "instruction": "如果现在是秋天，树叶全部变红变黄，地面上铺满落叶会怎样？", "note": "temporal/seasonal full scene; colour palette and ground cover change"}

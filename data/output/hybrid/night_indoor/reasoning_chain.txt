@@ -1,5 +1,0 @@
-Step 1: The image depicts a bright, sunlit room corner with a window on the right, a white plant pot on the windowsill, and a single leaf on the floor. The lighting is natural daylight from the window, casting soft shadows.
-
-Step 2: The hypothetical instruction asks to transform the scene from daytime to nighttime, implying a change in global lighting and atmosphere while preserving all physical objects and their spatial layout.
-
-Step 3: The expected visual outcome will feature a dark night sky visible through the window, cool moonlight illuminating the room, and pale blue shadows cast by the window frame. All objects (plant, pot, leaf, walls, floor) must remain unchanged in material, color, shape, and position.

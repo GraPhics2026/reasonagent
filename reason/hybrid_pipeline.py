@@ -68,6 +68,15 @@ def run_hybrid_pipeline(
 
     out_dir = ensure_output_dir(output_dir)
 
+    # Create subfolders for different workflow stages
+    reasoning_dir = ensure_output_dir(out_dir / "01_reasoning")
+    generation_dir = ensure_output_dir(out_dir / "02_generation")
+    verification_dir = ensure_output_dir(out_dir / "03_verification")
+
+    # --- Step 0: Copy original photo to output directory ---
+    original_path = out_dir / f"original{source.suffix or '.png'}"
+    shutil.copy2(source, original_path)
+
     # --- Step 1: Reason Agent (hybrid mode) ---
     reason = run_reason_agent(
         image_path=source,
@@ -90,16 +99,16 @@ def run_hybrid_pipeline(
     # Inject style anchor (smart: skips conflicting categories for transformative changes)
     scene_prompt = _inject_style_anchor(scene_prompt, reason, instruction)
 
-    write_reason_files(reason, reason_context, scene_prompt, out_dir)
+    write_reason_files(reason, reason_context, scene_prompt, reasoning_dir)
 
-    # --- Step 2: Copy reference image as image_before ---
-    before_path = out_dir / f"image_before{source.suffix or '.png'}"
+    # Also copy original image to reasoning folder for reference
+    before_path = reasoning_dir / f"image_before{source.suffix or '.png'}"
     shutil.copy2(source, before_path)
 
-    # --- Step 3: T2I generation via GenPilot ---
+    # --- Step 2: T2I generation via GenPilot ---
     gen_result: GenPipelineResult = run_gen_pipeline(
         prompt=scene_prompt,
-        output_dir=out_dir,
+        output_dir=generation_dir,
         iterations=iterations,
         candidates=candidates,
         dry_run=dry_run,
@@ -107,12 +116,16 @@ def run_hybrid_pipeline(
     )
     final_prompt = gen_result.final_prompt
 
-    # --- Step 4: Copy final image as image_after ---
+    # --- Step 3: Copy final image as image_after ---
     suffix = gen_result.final_image.rsplit(".", 1)[-1] if "." in gen_result.final_image else "png"
     after_path = out_dir / f"image_after.{suffix}"
     shutil.copy2(gen_result.final_image, after_path)
 
-    # --- Step 5: VQA verification ---
+    # Also copy to verification folder
+    verification_after_path = verification_dir / f"image_after.{suffix}"
+    shutil.copy2(gen_result.final_image, verification_after_path)
+
+    # --- Step 4: VQA verification ---
     client = MLLMClient()
     use_dry_run = (not client.configured) if dry_run is None else dry_run
     vqa_result: dict[str, object] | None = None
@@ -127,13 +140,20 @@ def run_hybrid_pipeline(
             use_dry_run=use_dry_run,
         )
 
+    # Save verification results
+    if vqa_result:
+        (verification_dir / "vqa_result.json").write_text(
+            json.dumps(vqa_result, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+
     # --- Build result ---
     result = HybridPipelineResult(
         final_image=str(after_path),
         final_prompt=final_prompt,
         scene_prompt=scene_prompt,
         reasoning_chain=reason.reasoning_chain,
-        image_before=str(before_path),
+        image_before=str(original_path),
         instruction=instruction,
         reasoning_type=reason.reasoning_type,
         visual_cues=reason.visual_cues,
@@ -147,6 +167,12 @@ def run_hybrid_pipeline(
             "reasoning_type": reason.reasoning_type,
             "num_iterations": iterations,
             "num_candidates": candidates,
+            "output_structure": {
+                "original": str(original_path),
+                "reasoning": str(reasoning_dir),
+                "generation": str(generation_dir),
+                "verification": str(verification_dir),
+            },
         },
     )
 
@@ -441,6 +467,120 @@ def _ensure_instruction_elements(scene_prompt: str, instruction: str) -> str:
 
                 logger.info("Added %s to scene_prompt", description)
                 break
+
+    # Detect split/duplicate instructions and enforce color consistency
+    scene_prompt = _enforce_color_consistency(scene_prompt, instruction)
+
+    return scene_prompt
+
+
+def _enforce_color_consistency(scene_prompt: str, instruction: str) -> str:
+    """Enforce color consistency when instruction involves splitting/duplicating objects.
+
+    When the instruction says "split X into two" or "duplicate X", all resulting
+    copies should have the same color as the original. The Reason Agent sometimes
+    generates different colors for different copies (e.g., red roses on left,
+    pink roses on right when splitting one red bouquet).
+    """
+    instruction_lower = instruction.lower()
+    prompt_lower = scene_prompt.lower()
+
+    # Detect split/duplicate patterns
+    split_patterns = [
+        r"分成.*两[束份个支]",
+        r"split.*into.*two",
+        r"分成.*两",
+        r"duplicate",
+        r"copies",
+        r"两[束份个支].*独立",
+    ]
+
+    is_split = any(re.search(p, instruction_lower) for p in split_patterns)
+    if not is_split:
+        return scene_prompt
+
+    # Extract original color from instruction or scene_prompt
+    # Common flower colors
+    color_patterns = [
+        (r"红[色玫]瑰?|red\s*(?:rose|roses)?", "red"),
+        (r"粉[色玫]瑰?|pink\s*(?:rose|roses)?", "pink"),
+        (r"白[色玫]瑰?|white\s*(?:rose|roses)?", "white"),
+        (r"黄[色玫]瑰?|yellow\s*(?:rose|roses)?", "yellow"),
+        (r"紫[色玫]瑰?|purple\s*(?:rose|roses)?", "purple"),
+        (r"橙[色玫]瑰?|orange\s*(?:rose|roses)?", "orange"),
+    ]
+
+    original_color = None
+    for pattern, color in color_patterns:
+        if re.search(pattern, instruction_lower):
+            original_color = color
+            break
+
+    # If not found in instruction, try to extract from scene_prompt
+    if not original_color:
+        for pattern, color in color_patterns:
+            if re.search(pattern, prompt_lower):
+                original_color = color
+                break
+
+    if not original_color:
+        return scene_prompt
+
+    # Map English color names to full descriptions
+    color_descriptions = {
+        "red": "deep red",
+        "pink": "pink",
+        "white": "white",
+        "yellow": "yellow",
+        "purple": "purple",
+        "orange": "orange",
+    }
+
+    target_color = color_descriptions.get(original_color, original_color)
+
+    # Find and replace inconsistent color descriptions for the split objects
+    # Pattern: look for different colors describing the same object type
+    # e.g., "deep red roses... lighter pink roses" → "deep red roses... deep red roses"
+
+    # Find all flower/bouquet color descriptions
+    flower_color_pattern = r"(?:deep\s+|lighter?\s+|light\s+|pale\s+)?(red|pink|white|yellow|purple|orange|mauve)\s+(?:roses?|flowers?|bouquet)"
+    matches = list(re.finditer(flower_color_pattern, prompt_lower))
+
+    if len(matches) >= 2:
+        # Check if there are different colors
+        color_map = {
+            "red": "red", "pink": "pink", "white": "white",
+            "yellow": "yellow", "purple": "purple", "orange": "orange", "mauve": "pink",
+        }
+        colors_found: set[str] = set()
+        for match in matches:
+            color_word = match.group(1)
+            if color_word in color_map:
+                colors_found.add(color_map[color_word])
+
+        if len(colors_found) > 1:
+            # Multiple colors found — need to make them consistent
+            logger.warning(
+                "Color inconsistency detected in split instruction: %s. "
+                "Original color: %s, found: %s. Fixing to %s.",
+                instruction, original_color, colors_found, target_color,
+            )
+
+            # Replace all non-original colors with the original color
+            for color_key, color_desc in color_descriptions.items():
+                if color_key != original_color:
+                    # Replace variations like "lighter pink", "mauve", etc.
+                    # with the original color
+                    patterns_to_replace = [
+                        (rf"lighter?\s+{color_desc}\s+and\s+\w+\s+roses", f"{target_color} roses"),
+                        (rf"lighter?\s+{color_desc}", target_color),
+                        (rf"light\s+{color_desc}", target_color),
+                        (rf"pale\s+{color_desc}", target_color),
+                        (rf"mauve\s+roses", f"{target_color} roses"),
+                        (rf"mauve", target_color),
+                    ]
+                    for pat, replacement in patterns_to_replace:
+                        scene_prompt = re.sub(pat, replacement, scene_prompt, flags=re.IGNORECASE)
 
     return scene_prompt
 
