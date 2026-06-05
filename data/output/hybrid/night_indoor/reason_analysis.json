@@ -1,0 +1,55 @@
+{
+  "mode": "hybrid",
+  "reasoning_chain": [
+    "Step 1: The image depicts a bright, sunlit room corner with a window on the right, a white plant pot on the windowsill, and a single leaf on the floor. The lighting is natural daylight from the window, casting soft shadows.",
+    "Step 2: The hypothetical instruction asks to transform the scene from daytime to nighttime, implying a change in global lighting and atmosphere while preserving all physical objects and their spatial layout.",
+    "Step 3: The expected visual outcome will feature a dark night sky visible through the window, cool moonlight illuminating the room, and pale blue shadows cast by the window frame. All objects (plant, pot, leaf, walls, floor) must remain unchanged in material, color, shape, and position."
+  ],
+  "vqa_checklist": [
+    {
+      "q": "Is the sky visible through the window dark with faint stars?",
+      "expected": "yes"
+    },
+    {
+      "q": "Are the walls still light blue matte?",
+      "expected": "yes"
+    },
+    {
+      "q": "Is the single dried brown leaf still on the floor in the same position?",
+      "expected": "yes"
+    },
+    {
+      "q": "Are the green plant and white pot still on the windowsill in the same location?",
+      "expected": "yes"
+    }
+  ],
+  "edit_prompt": "Transform the sunny indoor corner into a nighttime scene. Keep the white plant pot, green plant, dried leaf, walls, floor, and curtains exactly as they are. Replace the daylight sky with a dark starry night sky visible through the window. Illuminate the room with cool moonlight, casting pale blue shadows from the window frame onto the floor and walls.",
+  "scene_prompt": "An eye-level photograph of a serene indoor corner viewed from slightly left of center, facing a large multi-pane window on the RIGHT wall. The wall is painted a soft light blue with a matte finish, now appearing darker under low light conditions. The window has a white frame divided into six rectangular panes, through which a dark night sky dotted with faint stars is visible. A shallow white windowsill runs the full width of the window. On the left side of the windowsill sits a small square ceramic pot in off-white, approximately 15cm tall, containing a single green plant with broad oval leaves that have pointed tips; the plant is softly silhouetted against the dark window. Sheer white curtains hang from a rod above the window, one panel on the right side drawn slightly open. The floor is covered in a smooth, light blue surface with a subtle sheen, reflecting the cool moonlight. In the foreground, slightly left of center on the floor, lies a single small dried brown leaf. The room is illuminated by a soft, cool moonlight filtering through the window, creating pale blue shadows of the window frame across the floor and lower wall. Photorealistic, sharp focus, natural colors.",
+  "target_objects": [
+    "window sky",
+    "floor illumination",
+    "wall illumination"
+  ],
+  "reasoning_type": "temporal",
+  "visual_cues": [
+    "Camera viewpoint: eye-level view facing the corner of a room, with the window on the RIGHT side of the frame.",
+    "Spatial positions: the white square plant pot is on the windowsill at CENTER-RIGHT; the green plant with broad oval leaves grows upward from it. A single small dried brown leaf lies on the light blue floor in the FOREGROUND, slightly left of center. The wall is light blue matte on the LEFT, and the floor is a smooth, light blue surface extending across the lower half of the frame.",
+    "Dominant color palette: soft pastel tones of light blue and white, with green accents from the plant.",
+    "Lighting quality and direction: natural daylight enters from the window on the RIGHT, creating diagonal shadows of the window frame across the floor and lower wall.",
+    "Surface materials and textures: matte finish on the walls and floor; glossy glass on the window panes; ceramic texture on the plant pot; smooth fabric for the sheer white curtains partially visible on the far right.",
+    "Overall atmosphere: serene, quiet, and bright due to the sunlight."
+  ],
+  "physics_implications": [
+    "The window now shows a dark night sky instead of daylight. Moonlight replaces natural sunlight, casting cooler, paler shadows. The leaf on the floor remains dry and unchanged in position. The plant and pot retain their original appearance and location."
+  ],
+  "preserve_objects": [
+    "white square plant pot",
+    "green plant with broad oval leaves",
+    "dried brown leaf on floor",
+    "light blue matte walls",
+    "smooth light blue floor",
+    "sheer white curtains on the far right",
+    "spatial layout of all objects"
+  ],
+  "reason_context": "Reasoning type: temporal\nVisual cues from source image: Camera viewpoint: eye-level view facing the corner of a room, with the window on the RIGHT side of the frame.; Spatial positions: the white square plant pot is on the windowsill at CENTER-RIGHT; the green plant with broad oval leaves grows upward from it. A single small dried brown leaf lies on the light blue floor in the FOREGROUND, slightly left of center. The wall is light blue matte on the LEFT, and the floor is a smooth, light blue surface extending across the lower half of the frame.; Dominant color palette: soft pastel tones of light blue and white, with green accents from the plant.; Lighting quality and direction: natural daylight enters from the window on the RIGHT, creating diagonal shadows of the window frame across the floor and lower wall.\nExpected physical/causal outcome: The window now shows a dark night sky instead of daylight. Moonlight replaces natural sunlight, casting cooler, paler shadows. The leaf on the floor remains dry and unchanged in position. The plant and pot retain their original appearance and location.\nMust preserve: white square plant pot, green plant with broad oval leaves, dried brown leaf on floor, light blue matte walls, smooth light blue floor"
+}

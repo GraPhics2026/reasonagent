@@ -1,0 +1,5 @@
+Step 1: The image shows a single bouquet of red roses tied with a white ribbon, placed on a rustic wooden table near a window. Key objects include the roses, green leaves, stems, white ribbon, and wooden texture.
+
+Step 2: The hypothetical instruction asks to split the bouquet into two independent rose arrangements, implying a physical separation without altering the individual roses or their state.
+
+Step 3: The expected visual outcome is two separate bouquets of red roses, each tied with a white ribbon, placed side by side on the same wooden table. The background, lighting, and overall scene layout should remain unchanged.

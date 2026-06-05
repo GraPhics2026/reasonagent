@@ -1,0 +1,35 @@
+{
+  "final_image": "data\\output\\hybrid\\bouquet_input\\image_iter_1.png",
+  "final_prompt": "A bouquet of five fresh red roses with lush green leaves, elegantly tied with a delicate white ribbon, placed on a rustic wooden table. Soft natural sunlight streams in from a window to the left, casting gentle shadows across the scene.",
+  "route": "gen",
+  "reasoning_chain": [],
+  "prompt_before": "A bouquet of fresh red roses with green leaves, tied with a ribbon, placed on a wooden table. Natural sunlight from a window.",
+  "iterations": [
+    {
+      "iteration": 0,
+      "prompt": "A bouquet of fresh red roses with green leaves, tied with a ribbon, placed on a wooden table. Natural sunlight from a window.",
+      "analysis": "Baseline generation from the original prompt. {\"score\": 1.0, \"passed\": [\"There is a bouquet of fresh red roses with green leaves.\", \"The bouquet is tied with a ribbon.\", \"The bouquet is placed on a wooden table.\", \"Natural sunlight is visible, appearing to come from a window.\"], \"errors\": [], \"summary\": \"The image perfectly matches the original prompt checklist.\"}",
+      "score": 1.0,
+      "image_path": "data\\output\\hybrid\\bouquet_input\\image_before.png"
+    },
+    {
+      "iteration": 1,
+      "prompt": "A bouquet of five fresh red roses with lush green leaves, elegantly tied with a delicate white ribbon, placed on a rustic wooden table. Soft natural sunlight streams in from a window to the left, casting gentle shadows across the scene.",
+      "analysis": "GenPilot candidate selection. {\"prompt\": \"A bouquet of five fresh red roses with lush green leaves, elegantly tied with a delicate white ribbon, placed on a rustic wooden table. Soft natural sunlight streams in from a window to the left, casting gentle shadows across the scene.\", \"image_path\": \"data\\\\output\\\\hybrid\\\\bouquet_input\\\\image_iter_1.png\", \"score\": 1.0, \"analysis\": {\"score\": 1.0, \"passed\": [\"There is a bouquet of fresh red roses with green leaves.\", \"The bouquet is tied with a ribbon.\", \"The bouquet is placed on a wooden table.\", \"Natural sunlight is visible, appearing to come from a window.\"], \"errors\": [], \"summary\": \"The image perfectly matches the original prompt checklist.\"}, \"candidates\": [{\"prompt\": \"A bouquet of five fresh red roses with lush green leaves, elegantly tied with a delicate white ribbon, placed on a rustic wooden table. Soft natural sunlight streams in from a window to the left, casting gentle shadows across the scene.\", \"image_path\": \"data\\\\output\\\\hybrid\\\\bouquet_input\\\\candidate_iter_1_1.png\", \"score\": 1.0, \"analysis\": {\"score\": 1.0, \"passed\": [\"There is a bouquet of fresh red roses with green leaves.\", \"The bouquet is tied with a ribbon.\", \"The bouquet is placed on a wooden table.\", \"Natural sunlight is visible, appearing to come from a window.\"], \"errors\": [], \"summary\": \"The image perfectly matches the original prompt checklist.\"}}]}",
+      "score": 1.0,
+      "image_path": "data\\output\\hybrid\\bouquet_input\\image_iter_1.png"
+    }
+  ],
+  "metadata": {
+    "dry_run": false,
+    "strategy": "genpilot",
+    "num_iterations": 1,
+    "num_candidates": 1,
+    "constraints": [
+      "There is a bouquet of fresh red roses with green leaves.",
+      "The bouquet is tied with a ribbon.",
+      "The bouquet is placed on a wooden table.",
+      "Natural sunlight is visible, appearing to come from a window."
+    ]
+  }
+}

@@ -108,6 +108,32 @@ class EditPipelineResult:
         return payload
 
 
+@dataclass(slots=True)
+class HybridPipelineResult:
+    """Result from the hybrid pipeline: reason → scene_prompt → T2I generation."""
+
+    final_image: str
+    final_prompt: str
+    scene_prompt: str = ""
+    route: Route = "hybrid"
+    reasoning_chain: list[str] = field(default_factory=list)
+    image_before: str = ""
+    instruction: str = ""
+    reasoning_type: ReasoningType | None = None
+    visual_cues: list[str] = field(default_factory=list)
+    physics_implications: list[str] = field(default_factory=list)
+    target_objects: list[str] = field(default_factory=list)
+    preserve_objects: list[str] = field(default_factory=list)
+    vqa_checklist: list[VQACheck] = field(default_factory=list)
+    vqa_result: dict[str, Any] | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["vqa_checklist"] = [item.to_dict() for item in self.vqa_checklist]
+        return payload
+
+
 def ensure_output_dir(path: str | Path) -> Path:
     output_dir = Path(path)
     output_dir.mkdir(parents=True, exist_ok=True)

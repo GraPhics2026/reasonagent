@@ -47,19 +47,126 @@ Inspect the image carefully. Extract fine-grained visual cues before inferring t
 For edit mode, fill edit_prompt (English, image-editor ready).
 For hybrid mode, fill scene_prompt (English, text-to-image ready) instead of edit_prompt.
 
+IMPORTANT — hybrid mode camera & spatial composition:
+Since T2I generates from scratch with no image reference, the camera perspective and
+spatial layout of the original MUST be preserved. Extract these as visual_cues:
+- Camera viewpoint: eye-level / low angle / high angle / overhead, and the viewing
+  direction relative to the room (e.g. "eye-level view facing the window wall")
+- Spatial positions: label every object by its position relative to frame edges —
+  LEFT, RIGHT, CENTER, FOREGROUND, BACKGROUND (e.g. "window on the RIGHT wall",
+  "sofa in the CENTER foreground", "plant on the windowsill at CENTER-RIGHT")
+- Frame composition: what occupies each zone of the image — left third, center,
+  right third, upper half, lower half
+
+IMPORTANT — hybrid mode scene style extraction:
+Include these style cues in your visual_cues list:
+- Dominant color palette (e.g. "warm golden-hour tones", "cool blue-gray winter light")
+- Lighting quality and direction (e.g. "soft diffused light from left window", "harsh midday sun")
+- Surface materials and textures (e.g. "rustic wood grain", "matte ceramic", "glossy glass")
+- Overall atmosphere (e.g. "serene and quiet", "bright and lively", "cozy indoor warmth")
+
 CRITICAL for hybrid mode — scene_prompt is a STANDALONE T2I prompt:
 It will be sent directly to an image generator WITHOUT the original image.
 Therefore scene_prompt MUST describe the ENTIRE scene from scratch, NOT just the changed parts.
-- First: describe ALL subjects — every person, animal, object visible in the image.
-  Include what they look like (clothing color, hair, pose, size, breed), what they are doing,
-  and their spatial positions relative to each other.
-- Then: describe the environment (ground, sky, buildings, furniture, vegetation).
-- Finally: apply the hypothetical change to the relevant parts while keeping everything else intact.
-- The result must read like a complete, flowing English paragraph that paints the full picture.
-- BAD example (never do this): "grass, man's sneakers, dog's fur with snow applied"
-- GOOD example: "A man in a blue t-shirt and khaki pants stands next to a golden retriever
-  in a park on a snowy winter day. Fresh white snow covers the ground. Park benches and bare
-  trees in the background under a bright overcast sky. Natural daylight, photorealistic."
+
+THE SCENE PROMPT MUST BE A FORENSIC-LEVEL DESCRIPTION OF THE ORIGINAL IMAGE,
+with ONLY the instruction's changes applied. Think of it as: "describe this exact
+photograph to an artist who cannot see it, then apply changes to specific elements."
+
+RULES (violating any of these will produce bad results):
+1. DESCRIBE EVERY SURFACE AND OBJECT in the original image precisely:
+   - Floor: material, color, texture, pattern (e.g. "light gray tile floor with
+     subtle grout lines" NOT generic "wooden floor")
+   - Walls: color, finish, any visible features (e.g. "light blue matte wall with
+     no decorations" NOT vague "smooth matte walls")
+   - Window: size, frame material/color, number of panes, position on wall
+   - Windowsill: depth, material, color, width relative to window
+   - Plant pot: shape, size, color, material, exact position on windowsill
+   - Plant: leaf shape, count, size, color, growth direction
+   - Curtains: fabric, color, how they hang, which side of window
+   - Any other objects visible (leaf, furniture, decorations)
+2. DO NOT INVENT OBJECTS that are not in the original image. No "bedside lamp",
+   no "framed picture on wall", no "breeze" unless they actually exist in the
+   original image. If an object is not in the image, do NOT describe it.
+3. ONLY CHANGE what the instruction asks to change:
+   - For "become night": change ONLY the sky/lighting/atmosphere. The floor,
+     walls, windowsill, pot, plant, leaf, curtains — SAME materials, colors,
+     shapes, positions as the original.
+   - For "split into two bouquets": change ONLY the count and arrangement of
+     flowers. Table, light, background — SAME as original.
+   - For "add many people": ADD people but keep ALL original elements identical.
+4. The first sentence of scene_prompt must establish the camera perspective
+   (e.g. "An eye-level photograph of a room...")
+5. The scene_prompt must be 150-300 words of concrete visual description.
+   No vague adjectives without concrete referents.
+
+- The instruction may require two types of changes:
+  a) PRESERVATIVE: add elements while keeping the original atmosphere.
+     For these, keep lighting and atmosphere as-is.
+  b) TRANSFORMATIVE: change time-of-day, weather, or global atmosphere.
+     For these, describe ONLY the FINAL state — NEVER mention the original
+     state or say "as the scene transitions". The scene_prompt should read
+     as if the final state is the ONLY state that ever existed.
+- BAD example (DO NOT narrate transition): "A bright sunlit room. As night
+  falls, the room becomes darker..." — T2I reads "bright sunlit" and generates
+  a daytime image regardless of what comes after.
+- BAD example (DO NOT invent objects): "Warm light from a bedside lamp off-frame
+  casts amber shadows" — if there is no lamp in the original image, T2I may
+  hallucinate a lamp or mismatched lighting.
+- BAD example (DO NOT be vague): "A serene room with smooth walls" — too short,
+  T2I fills in its own imagination. The prompt must be 150+ words.
+
+GOOD example for "sunny indoor room → night" (note the forensic detail of
+the ORIGINAL room, preserved exactly, with ONLY lighting/sky changed):
+
+"An eye-level photograph of a bright indoor space viewed from slightly left
+of center, facing a wall with a large multi-pane window on the right side. The
+wall is painted a soft light blue with a matte finish. The window has a thin
+dark metal frame divided into rectangular panes. A shallow white windowsill runs
+the full width of the window. On the left side of the windowsill sits a small
+round ceramic pot in off-white, about 15cm tall, with a single green plant
+growing upward — broad oval leaves with pointed tips. Sheer white curtains hang
+from a rod above the window, one panel on the right side drawn slightly open.
+The floor is covered in large square tiles in a pale cream color with faint
+beige veins. In the foreground, slightly left of center on the floor, lies a
+single small dried brown leaf. Natural daylight enters from the window on the
+right, casting soft diagonal shadows of the window frame across the floor and
+lower wall. Photorealistic, sharp focus, natural colors."
+
+Now for the night version, change ONLY the lighting/sky/atmosphere — all
+physical objects, materials, and positions remain identical to the above:
+
+"An eye-level photograph of a room viewed from slightly left of center, facing
+a wall with a large multi-pane window on the right side. The wall is painted a
+soft light blue with a matte finish, now appearing darker in the low light. The
+window has a thin dark metal frame divided into rectangular panes; through the
+glass, a dark night sky dotted with faint stars is visible. A shallow white
+windowsill runs the full width of the window. On the left side of the windowsill
+sits a small round off-white ceramic pot, about 15cm tall, with a single green
+plant — broad oval leaves with pointed tips, now softly silhouetted against the
+dark window. Sheer white curtains hang from a rod above the window, one panel on
+the right side drawn slightly open. The floor is covered in large square tiles
+in a pale cream color with faint beige veins, now dimly visible. In the
+foreground, slightly left of center on the tile floor, lies a single small dried
+brown leaf. The room is illuminated by a soft, cool moonlight filtering through
+the window, creating pale blue shadows across the floor and wall.
+Photorealistic, sharp focus, natural colors."
+
+Notice: the original scene's floor (pale cream tiles), pot (off-white ceramic,
+round, small), plant (broad oval leaves, pointed tips), leaf (small, dried, brown,
+floor foreground left-center), windowsill (shallow, white, full window width),
+curtains (sheer white, rod-mounted, right panel partially open), wall (soft light
+blue matte), and window (multi-pane, thin dark metal frame) are ALL preserved
+exactly. ONLY the lighting, sky, and atmosphere changed.
+
+This is the level of detail and fidelity required for EVERY scene_prompt.
+If you cannot describe an element precisely because you cannot see it clearly
+in the image, describe what you CAN see -- but never guess or invent.
+
+Similarly, the vqa_checklist MUST include verification items for ALL parts of the
+instruction -- not just the changes but also any newly requested elements. Also include
+checks for spatial consistency (e.g. "Is the window on the RIGHT wall?", "Is the plant
+still on the windowsill?").
 
 Think of it this way: if someone reads your scene_prompt aloud, they should be able to
 visualize the ENTIRE image, not guess what it looks like.
@@ -286,7 +393,8 @@ def _build_heuristic_result(
 
 def infer_reasoning_type(instruction: str) -> ReasoningType:
     lower = instruction.lower()
-    if any(token in lower for token in ["sunset", "night", "morning", "later", "after hours", "日落", "夜晚", "时间"]):
+    if any(token in lower for token in ["sunset", "night", "morning", "later", "after hours", "snow", "winter",
+                                         "日落", "夜晚", "时间", "雪", "冬天", "大雪", "下雪", "季节"]):
         return "temporal"
     if any(token in lower for token in ["land", "collide", "because", "导致", "因此", "interaction", "落在", "碰撞"]):
         return "causal"

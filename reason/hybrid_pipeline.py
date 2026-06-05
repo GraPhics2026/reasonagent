@@ -17,9 +17,15 @@ import re
 import shutil
 from pathlib import Path
 
+from .api_client import MLLMClient, extract_json_object
 from .gen_pipeline import run_gen_pipeline
 from .reason_agent import build_reason_context, run_reason_agent
-from .schemas import GenPipelineResult, ensure_output_dir
+from .schemas import (
+    GenPipelineResult,
+    HybridPipelineResult,
+    VQACheck,
+    ensure_output_dir,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +38,15 @@ def run_hybrid_pipeline(
     candidates: int = 2,
     dry_run: bool | None = None,
     seed: int | None = None,
-) -> dict[str, object]:
-    """Run the hybrid pipeline: reason → scene_prompt → T2I generation.
+) -> HybridPipelineResult:
+    """Run the hybrid pipeline: reason → scene_prompt → T2I generation + VQA.
 
     The hybrid route regenerates the entire scene from scratch via T2I.
     It does NOT use image editing. For visual identity preservation, use the
     edit route instead.
+
+    After T2I generation, the result is verified with VQA against the reason
+    agent's checklist to confirm the counterfactual change is satisfied.
 
     Args:
         image_path: Path to the reference image (used for reasoning only, not as image condition).
@@ -49,7 +58,8 @@ def run_hybrid_pipeline(
         seed: Optional random seed for T2I.
 
     Returns:
-        A dict with final_image, final_prompt, reasoning_chain, route, and metadata.
+        HybridPipelineResult with final_image, final_prompt, scene_prompt,
+        reasoning_chain, vqa_result, and metadata.
     """
 
     source = Path(image_path)
@@ -70,6 +80,12 @@ def run_hybrid_pipeline(
 
     # Validate scene_prompt quality — fix fragmentary prompts before T2I
     scene_prompt = _validate_and_fix_scene_prompt(scene_prompt, reason, instruction)
+
+    # Inject perspective anchor: camera viewpoint + spatial layout
+    scene_prompt = _inject_perspective_anchor(scene_prompt, reason, instruction)
+
+    # Inject style anchor (smart: skips conflicting categories for transformative changes)
+    scene_prompt = _inject_style_anchor(scene_prompt, reason, instruction)
 
     write_reason_files(reason, reason_context, scene_prompt, out_dir)
 
@@ -93,35 +109,127 @@ def run_hybrid_pipeline(
     after_path = out_dir / f"image_after.{suffix}"
     shutil.copy2(gen_result.final_image, after_path)
 
+    # --- Step 5: VQA verification ---
+    client = MLLMClient()
+    use_dry_run = (not client.configured) if dry_run is None else dry_run
+    vqa_result: dict[str, object] | None = None
+    if reason.vqa_checklist:
+        vqa_result = verify_hybrid_result(
+            client=client,
+            image_path=after_path,
+            instruction=instruction,
+            scene_prompt=scene_prompt,
+            checklist=reason.vqa_checklist,
+            reason_context=reason_context,
+            use_dry_run=use_dry_run,
+        )
+
     # --- Build result ---
-    result: dict[str, object] = {
-        "final_image": str(after_path),
-        "final_prompt": final_prompt,
-        "scene_prompt": scene_prompt,
-        "route": "hybrid",
-        "reasoning_chain": reason.reasoning_chain,
-        "image_before": str(before_path),
-        "instruction": instruction,
-        "reasoning_type": reason.reasoning_type,
-        "visual_cues": reason.visual_cues,
-        "physics_implications": reason.physics_implications,
-        "target_objects": reason.target_objects,
-        "preserve_objects": reason.preserve_objects,
-        "vqa_checklist": [item.to_dict() for item in reason.vqa_checklist],
-        "metadata": {
+    result = HybridPipelineResult(
+        final_image=str(after_path),
+        final_prompt=final_prompt,
+        scene_prompt=scene_prompt,
+        reasoning_chain=reason.reasoning_chain,
+        image_before=str(before_path),
+        instruction=instruction,
+        reasoning_type=reason.reasoning_type,
+        visual_cues=reason.visual_cues,
+        physics_implications=reason.physics_implications,
+        target_objects=reason.target_objects,
+        preserve_objects=reason.preserve_objects,
+        vqa_checklist=reason.vqa_checklist,
+        vqa_result=vqa_result,
+        metadata={
             "dry_run": gen_result.metadata.get("dry_run", True),
             "reasoning_type": reason.reasoning_type,
             "num_iterations": iterations,
             "num_candidates": candidates,
         },
-    }
+    )
 
     (out_dir / "hybrid_final.json").write_text(
-        json.dumps(result, ensure_ascii=False, indent=2),
+        json.dumps(result.to_dict(), ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# VQA verification for hybrid
+# ---------------------------------------------------------------------------
+
+
+def verify_hybrid_result(
+    client: MLLMClient,
+    image_path: str | Path,
+    instruction: str,
+    scene_prompt: str,
+    checklist: list[VQACheck],
+    reason_context: str = "",
+    use_dry_run: bool = False,
+) -> dict[str, object]:
+    """Verify a hybrid-generated image against the reason agent's VQA checklist.
+
+    Uses MLLM Vision to inspect the generated image and score how well it
+    satisfies each checklist item. The scoring is strict — a perfect 1.0
+    requires every item to be unambiguously satisfied.
+    """
+    if use_dry_run:
+        return {
+            "score": None,
+            "passed": [],
+            "errors": ["dry_run: visual verification skipped"],
+            "summary": "Heuristic — no visual analysis in dry-run mode.",
+        }
+
+    context_block = f"\nReasoning context:\n{reason_context}\n" if reason_context else ""
+    user_prompt = f"""Original hypothetical instruction:
+{instruction}
+{context_block}
+Scene prompt applied:
+{scene_prompt}
+
+Checklist:
+{json.dumps([item.to_dict() for item in checklist], ensure_ascii=False, indent=2)}
+
+Inspect the generated image and return JSON exactly in this shape:
+{{
+  "score": 0.0,
+  "passed": ["checklist items that are satisfied"],
+  "errors": ["missing or incorrect visual constraints"],
+  "summary": "one short sentence"
+}}
+Use score from 0 to 1. Be strict: score 1.0 only if every checklist item
+is fully and unambiguously satisfied. Penalize missing subjects, wrong scene
+composition, and failure to apply the counterfactual change."""
+    try:
+        raw = client.chat_vision(
+            image_path,
+            user_prompt,
+            system_prompt=(
+                "You are a strict visual verification agent for image generation. "
+                "Penalize missing objects, wrong interactions, scene composition failures, "
+                "and counterfactual changes that are not applied. "
+                "Return strict JSON only."
+            ),
+            temperature=0.1,
+        )
+        data = extract_json_object(raw)
+        score = data.get("score")
+        if isinstance(score, str):
+            score = float(score)
+        data["score"] = score if isinstance(score, (int, float)) else None
+        data.setdefault("passed", [])
+        data.setdefault("errors", [])
+        return data
+    except Exception as exc:
+        return {
+            "score": None,
+            "passed": [],
+            "errors": [str(exc)],
+            "summary": "Hybrid VQA fallback used.",
+        }
 
 
 def _validate_and_fix_scene_prompt(
@@ -210,6 +318,204 @@ def _build_scene_prompt(reason, instruction: str, cause: str) -> str:
     return constructed
 
 
+# ---------------------------------------------------------------------------
+# Style anchor injection
+# ---------------------------------------------------------------------------
+
+_STYLE_KEYWORDS: dict[str, list[str]] = {
+    "lighting": [
+        "light", "lighting", "sunlight", "daylight", "shadow", "overcast",
+        "golden hour", "soft", "harsh", "diffuse", "bright", "dim", "warm",
+        "cool", "backlit", "illuminated", "glow", "dusk", "dawn", "sunbeam",
+        "sunbeams", "diagonal", "ray",
+    ],
+    "color": [
+        "palette", "tone", "hue", "saturation", "vibrant", "muted",
+        "monochrome", "contrast", "pastel", "deep", "rich", "color",
+        "red", "blue", "green", "yellow", "brown", "white", "black", "gray",
+        "golden", "silver", "amber", "teal", "crimson", "navy",
+    ],
+    "material": [
+        "texture", "wood", "grain", "metal", "glass", "fabric",
+        "ceramic", "stone", "marble", "velvet", "silk", "leather",
+        "rustic", "polished", "rough", "smooth", "glossy", "matte",
+        "woven", "carved", "weathered",
+    ],
+    "atmosphere": [
+        "atmosphere", "mood", "ambient", "serene", "cozy", "lively",
+        "dramatic", "tranquil", "misty", "foggy", "crisp", "airy",
+        "warm", "cold", "inviting", "spacious", "intimate", "nostalgic",
+    ],
+    "spatial": [
+        "position", "left", "right", "center", "centre", "foreground",
+        "background", "angle", "perspective", "viewpoint", "camera",
+        "eye-level", "low angle", "high angle", "overhead", "facing",
+        "wall", "floor", "ceiling", "window on the", "on the left",
+        "on the right", "in the center", "corner", "edge", "side",
+        "layout", "composition", "frame", "field of view",
+    ],
+}
+
+_TRANSFORMATIVE_KEYWORDS: list[str] = [
+    "night", "midnight", "dark", "darken", "darker", "dim", "dimly",
+    "sunset", "sunrise", "dusk", "dawn", "evening", "morning",
+    "深夜", "夜晚", "黄昏", "黎明", "变暗", "天黑", "黑暗",
+    "snow", "winter", "rain", "storm", "fog", "mist",
+    "下雪", "冬天", "下雨", "暴风雨", "雾",
+    "autumn", "秋天", "fall season",
+]
+
+
+def _detect_transformative_change(instruction: str) -> set[str]:
+    """Detect which style categories the instruction intends to change.
+
+    Returns a set of category names to SKIP in style anchoring because
+    the instruction itself changes them (e.g. day→night should skip "lighting").
+    """
+    lower = instruction.lower()
+    skip: set[str] = set()
+
+    time_change = any(kw in lower for kw in [
+        "night", "midnight", "dark", "darken", "darker", "dim", "dimly",
+        "sunset", "sunrise", "dusk", "dawn", "evening", "深夜", "夜晚",
+        "黄昏", "黎明", "变暗", "天黑", "黑暗",
+    ])
+    weather_change = any(kw in lower for kw in [
+        "snow", "winter", "rain", "storm", "fog", "mist",
+        "下雪", "冬天", "下雨", "暴风雨", "雾",
+    ])
+    season_change = any(kw in lower for kw in [
+        "autumn", "秋天", "fall", "spring", "春天", "summer", "夏天",
+    ])
+
+    if time_change or weather_change or season_change:
+        skip.add("lighting")
+        skip.add("atmosphere")
+
+    return skip
+
+
+def _inject_perspective_anchor(scene_prompt: str, reason, instruction: str = "") -> str:
+    """Append a perspective-anchor sentence from visual_cues to preserve camera
+    viewpoint and spatial composition in T2I generation.
+
+    Extracts camera angle, viewing direction, and object positions (left/right/
+    center/foreground/background) and injects them as explicit constraints.
+
+    For transformative changes (day→night, season shifts), cues containing
+    lighting or atmosphere keywords are filtered out to prevent the original
+    scene's lighting from polluting the transformed scene.
+    """
+    cues = reason.visual_cues or []
+    if not cues:
+        return scene_prompt
+
+    skip_categories = _detect_transformative_change(instruction) if instruction else set()
+    lighting_kw = set(_STYLE_KEYWORDS.get("lighting", []))
+    atmosphere_kw = set(_STYLE_KEYWORDS.get("atmosphere", []))
+
+    def _is_purely_spatial(cue: str) -> bool:
+        """Only include a cue if it's about spatial layout, not lighting/atmosphere."""
+        cue_lower = cue.lower()
+        # Must match at least one spatial keyword
+        if not any(kw in cue_lower for kw in _STYLE_KEYWORDS["spatial"]):
+            return False
+        # If lighting/atmosphere should be skipped, exclude cues about them
+        if "lighting" in skip_categories and any(kw in cue_lower for kw in lighting_kw):
+            return False
+        if "atmosphere" in skip_categories and any(kw in cue_lower for kw in atmosphere_kw):
+            return False
+        return True
+
+    spatial_fragments: list[str] = []
+    for cue in cues:
+        if _is_purely_spatial(cue):
+            spatial_fragments.append(cue.rstrip("."))
+
+    if not spatial_fragments:
+        return scene_prompt
+
+    # Deduplicate and build anchor
+    unique: list[str] = []
+    seen: set[str] = set()
+    for f in spatial_fragments:
+        key = f.lower()
+        if key not in seen:
+            unique.append(f)
+            seen.add(key)
+
+    if not unique:
+        return scene_prompt
+
+    anchor = "Perspective: " + "; ".join(unique[:5]) + "."
+    logger.info("Injected perspective anchor: %.200s...", anchor)
+
+    if anchor.lower() not in scene_prompt.lower():
+        return f"{scene_prompt.rstrip('.')}. {anchor}"
+    return scene_prompt
+
+
+def _inject_style_anchor(scene_prompt: str, reason, instruction: str = "") -> str:
+    """Append a style-anchor sentence derived from the reason agent's visual_cues.
+
+    Since hybrid mode feeds the scene_prompt to a T2I model without the original
+    image, the T2I model has no visual reference. This function extracts style,
+    color, material, and spatial cues from visual_cues and appends them as a
+    compact anchor sentence.
+
+    For TRANSFORMATIVE changes (day→night, weather shifts, season changes),
+    lighting and atmosphere categories are skipped to avoid contradicting
+    the instruction with the original scene's lighting/atmosphere.
+    """
+    cues = reason.visual_cues or []
+    if not cues:
+        return scene_prompt
+
+    skip_categories = _detect_transformative_change(instruction) if instruction else set()
+
+    matched: dict[str, list[str]] = {}
+    for cue in cues:
+        cue_lower = cue.lower()
+        for category, keywords in _STYLE_KEYWORDS.items():
+            if category in skip_categories:
+                continue
+            for kw in keywords:
+                if kw in cue_lower:
+                    matched.setdefault(category, []).append(cue)
+                    break
+
+    if not matched:
+        return scene_prompt
+
+    # Build compact style fragments, deduplicating across categories
+    fragments: list[str] = []
+    used: set[str] = set()
+    category_order = [c for c in ("lighting", "color", "material", "atmosphere")
+                      if c not in skip_categories]
+    for category in category_order:
+        if category in matched:
+            unused = [c for c in matched[category] if c not in used]
+            best = max(unused, key=len) if unused else max(matched[category], key=len)
+            used.add(best)
+            fragments.append(best.rstrip("."))
+
+    if not fragments:
+        return scene_prompt
+
+    anchor = "Style reference: " + "; ".join(fragments[:4]) + "."
+    if skip_categories:
+        logger.info(
+            "Injected style anchor (skipped %s for transformative change): %.200s...",
+            skip_categories, anchor,
+        )
+    else:
+        logger.info("Injected style anchor: %.200s...", anchor)
+
+    if anchor.lower() not in scene_prompt.lower():
+        return f"{scene_prompt.rstrip('.')}. {anchor}"
+    return scene_prompt
+
+
 def write_reason_files(
     reason,
     reason_context: str,
@@ -259,7 +565,7 @@ def main() -> None:
         dry_run=not args.real_api,
         seed=args.seed,
     )
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(json.dumps(result.to_dict(), ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":
