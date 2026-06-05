@@ -1,61 +1,57 @@
 {
   "mode": "hybrid",
   "reasoning_chain": [
-    "Step 1: Observe the original scene — an eye-level outdoor park photograph with a man standing CENTER, a golden retriever sitting to his RIGHT (viewer’s right) in FOREGROUND, green grass covering the ground, two wooden benches in BACKGROUND LEFT and RIGHT, trees with green leaves behind them, distant water and city skyline under bright daylight. Lighting is direct sunlight from upper left, casting sharp shadows on grass. Dominant palette: green grass, blue sky, beige pants, light blue shirt, golden fur.",
-    "Step 2: The instruction requests two simultaneous changes — (a) add many people throughout the park, and (b) cover the ground entirely with snow. This implies replacing the green grass texture with white snow while preserving all existing objects’ positions and adding new human figures distributed across the scene.",
-    "Step 3: Visual outcome — snow blankets the entire ground plane (FOREGROUND to BACKGROUND), obscuring grass but leaving bench legs, tree trunks, and dog paws partially embedded or resting atop it. Many people are added: some walking along paths, others sitting on benches, children playing near trees, couples strolling — all dressed in winter clothing. Original subjects (man and dog) remain in exact same pose and position, now standing/sitting on snow. Lighting remains bright daytime; atmosphere becomes crisp winter clarity."
+    "Step 1: Observe key objects: an East Asian man with light skin, dark hair, smiling, wearing a light blue short-sleeve shirt and khaki pants, standing in the CENTER; a golden retriever dog sitting to his RIGHT; park with green grass, trees on LEFT and BACKGROUND, dark wooden benches in BACKGROUND LEFT and RIGHT, a body of water and city skyline in far BACKGROUND.",
+    "Step 2: Infer the counterfactual change: the instruction implies adding many people to the park and covering the ground with snow, transforming the scene into a snowy winter setting with crowds.",
+    "Step 3: Derive expected visual outcome: the ground becomes white with snow, numerous people appear throughout the park in winter clothing, while the man, dog, and other park elements remain in their positions with possible snow accumulation on surfaces like trees and benches."
   ],
   "vqa_checklist": [
     {
-      "q": "Is the ground completely covered in snow instead of grass?",
+      "q": "Is the ground covered with white snow instead of green grass?",
       "expected": "yes"
     },
     {
-      "q": "Are there many people added throughout the scene — walking, sitting, playing?",
+      "q": "Are there many people visible throughout the park, dressed in winter clothing?",
       "expected": "yes"
     },
     {
-      "q": "Does the man remain in the CENTER FOREGROUND with unchanged pose and clothing?",
+      "q": "Is the original East Asian man still present in the center wearing a light blue shirt and khaki pants?",
       "expected": "yes"
     },
     {
-      "q": "Is the golden retriever still seated to the man’s RIGHT, unchanged in appearance?",
-      "expected": "yes"
-    },
-    {
-      "q": "Do shadows fall consistently from upper left, matching original lighting direction?",
+      "q": "Is the golden retriever dog sitting to the right of the man with golden fur?",
       "expected": "yes"
     }
   ],
   "edit_prompt": null,
-  "scene_prompt": "An eye-level photograph of a bustling winter park scene under bright midday sun. In the CENTER FOREGROUND stands a man with curly dark hair, wearing a light blue short-sleeve button-up shirt, beige chinos, and white sneakers — his pose and expression identical to original, now standing on a thick layer of pristine white snow that covers the entire ground from foreground to background. To his RIGHT (viewer’s right) sits a golden retriever, its fluffy golden coat contrasting against the snow, paws slightly sunk into the soft surface. Behind them, two wooden park benches — one BACKGROUND LEFT, one BACKGROUND RIGHT — are occupied by people in winter coats: a couple sharing the left bench, a solo reader on the right. Additional people populate the scene: children building snowmen near the LEFT tree, a jogger in red jacket moving along the path behind the benches, three friends laughing near the RIGHT bench, and a family walking hand-in-hand toward the distant waterfront. Trees with bare branches (indicating winter) stand MIDGROUND LEFT and CENTER, their trunks surrounded by mounded snow. The far BACKGROUND reveals calm water and a hazy city skyline under a pale blue sky. Sunlight streams from upper left, casting crisp, elongated shadows of people and objects onto the snow. Snow texture is detailed — footprints, slight drifts around benches, undisturbed patches between groups. Atmosphere is cheerful, active, and crisply cold. Photorealistic, sharp focus, natural winter colors.",
+  "scene_prompt": "An eye-level photograph of a park scene viewed from a central position, facing an East Asian man and his golden retriever dog. The man stands in the CENTER with light skin, short dark hair, and a smiling expression, wearing a light blue short-sleeve button-up shirt and khaki pants with white shoes. The dog sits to his RIGHT with golden fur and a calm demeanor. The ground is entirely covered in a smooth layer of white snow, with faint footprints visible. Numerous people populate the park: in the BACKGROUND, individuals and groups walk along snow-dusted paths, some sit on dark wooden benches under trees with green leaves lightly dusted with snow, and others stand talking, dressed in winter attire like coats, hats, and scarves, with a mix of ethnicities including East Asian, Caucasian, and others. The trees have brown trunks and green foliage, now lightly coated with snow. Two dark wooden benches are visible in the BACKGROUND LEFT and RIGHT. Beyond, a body of water reflects the overcast sky, and a distant city skyline is visible. The sky is gray and overcast, providing soft, even lighting with no harsh shadows. The atmosphere is serene and wintry, with a cool color palette dominated by whites, grays, and muted greens. Photorealistic, sharp focus, natural composition.",
   "target_objects": [
-    "ground surface (grass → snow)",
-    "addition of multiple people throughout scene"
+    "ground",
+    "people"
   ],
   "reasoning_type": "physical",
   "visual_cues": [
-    "Camera viewpoint: eye-level, facing forward toward man and dog centered in frame",
-    "Spatial positions: Man CENTER FOREGROUND, dog RIGHT FOREGROUND, benches BACKGROUND LEFT and RIGHT, trees MIDGROUND LEFT and CENTER, water/skyline FAR BACKGROUND",
-    "Dominant color palette: originally green grass + blue sky → transformed to white snow + blue sky + colorful winter coats",
-    "Lighting quality: bright midday sun from upper left, casting defined shadows now visible on snow surface",
-    "Surface materials: grass replaced by packed snow texture; benches retain wood grain; dog fur unchanged; man’s clothes unchanged",
-    "Overall atmosphere: lively winter park day — active, cold but sunny, bustling with activity"
+    "Camera viewpoint: eye-level, facing the subjects in the center.",
+    "Spatial positions: Man in CENTER, dog to his RIGHT, benches in BACKGROUND LEFT and RIGHT, trees on LEFT and BACKGROUND, water and skyline in far BACKGROUND.",
+    "Dominant color palette: natural greens from grass and trees, blue from sky and shirt, warm tones from dog's fur and man's skin.",
+    "Lighting quality: bright daylight with soft shadows cast by trees and subjects, sun overhead.",
+    "Surface materials: grass texture, fabric of man's shirt and pants, fur of dog.",
+    "Overall atmosphere: peaceful, sunny day in a park.",
+    "For the man: East Asian ethnicity, light skin with warm undertone, dark hair, smiling facial features, lean build, wearing light blue shirt and khaki pants."
   ],
   "physics_implications": [
-    "Snow covers all ground surfaces uniformly, accumulating around bench legs and tree bases",
-    "Footprints may appear where people walk, especially near benches and paths",
-    "Dog’s paws and man’s shoes show slight indentation into snow",
-    "People wear winter attire: coats, hats, scarves, gloves — colors vary for visual diversity",
-    "Shadows cast by people and objects remain consistent with original sun direction (upper left)"
+    "The ground transitions from green grass to a smooth white snow-covered surface.",
+    "People appear in the park, dressed in winter attire like coats and scarves, walking, sitting, or standing.",
+    "The lighting changes from bright sunlight to soft overcast light, reducing shadows and cooling the color palette.",
+    "Snow may lightly dust tree leaves and bench surfaces, altering textures."
   ],
   "preserve_objects": [
-    "man (pose, clothing, position)",
-    "golden retriever (pose, position, appearance)",
-    "benches (position, material, structure)",
-    "trees (trunk position, leafless branches if snow implies winter)",
-    "distant water and skyline",
-    "lighting direction and intensity"
+    "man",
+    "dog",
+    "benches",
+    "trees",
+    "water",
+    "skyline"
   ],
-  "reason_context": "Reasoning type: physical\nVisual cues from source image: Camera viewpoint: eye-level, facing forward toward man and dog centered in frame; Spatial positions: Man CENTER FOREGROUND, dog RIGHT FOREGROUND, benches BACKGROUND LEFT and RIGHT, trees MIDGROUND LEFT and CENTER, water/skyline FAR BACKGROUND; Dominant color palette: originally green grass + blue sky → transformed to white snow + blue sky + colorful winter coats; Lighting quality: bright midday sun from upper left, casting defined shadows now visible on snow surface\nExpected physical/causal outcome: Snow covers all ground surfaces uniformly, accumulating around bench legs and tree bases; Footprints may appear where people walk, especially near benches and paths; Dog’s paws and man’s shoes show slight indentation into snow; People wear winter attire: coats, hats, scarves, gloves — colors vary for visual diversity\nMust preserve: man (pose, clothing, position), golden retriever (pose, position, appearance), benches (position, material, structure), trees (trunk position, leafless branches if snow implies winter), distant water and skyline"
+  "reason_context": "Reasoning type: physical\nVisual cues from source image: Camera viewpoint: eye-level, facing the subjects in the center.; Spatial positions: Man in CENTER, dog to his RIGHT, benches in BACKGROUND LEFT and RIGHT, trees on LEFT and BACKGROUND, water and skyline in far BACKGROUND.; Dominant color palette: natural greens from grass and trees, blue from sky and shirt, warm tones from dog's fur and man's skin.; Lighting quality: bright daylight with soft shadows cast by trees and subjects, sun overhead.\nExpected physical/causal outcome: The ground transitions from green grass to a smooth white snow-covered surface.; People appear in the park, dressed in winter attire like coats and scarves, walking, sitting, or standing.; The lighting changes from bright sunlight to soft overcast light, reducing shadows and cooling the color palette.; Snow may lightly dust tree leaves and bench surfaces, altering textures.\nMust preserve: man, dog, benches, trees, water"
 }

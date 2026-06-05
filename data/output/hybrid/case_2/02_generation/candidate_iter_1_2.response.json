@@ -6,7 +6,7 @@
         "message": {
           "content": [
             {
-              "image": "https://dashscope-7c2c.oss-accelerate.aliyuncs.com/7d/3e/20260605/51613171/519e6aa8-297e-499c-b914-3037420b58de.png?Expires=1781249174&OSSAccessKeyId=LTAI5tPxpiCM2hjmWrFXrym1&Signature=4pSkyVP%2F3gRal7avaqi4jFKu338%3D"
+              "image": "https://dashscope-7c2c.oss-accelerate.aliyuncs.com/7d/04/20260605/51613171/ad33b93f-1d8e-454c-86f3-59d7ed88280b.png?Expires=1781264559&OSSAccessKeyId=LTAI5tPxpiCM2hjmWrFXrym1&Signature=YbwYLtFm2OVOiwKYJ3%2FEO5mPxEw%3D"
             }
           ],
           "role": "assistant"
@@ -19,5 +19,5 @@
     "image_count": 1,
     "width": 1024
   },
-  "request_id": "2e0d636e-5eff-9ee7-8259-782559300513"
+  "request_id": "e0a215ef-d97c-91a8-979b-cb270cf99ed1"
 }

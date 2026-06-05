@@ -1,11 +1,11 @@
 {
   "score": 1.0,
   "passed": [
-    "Are there exactly two separate bouquets of roses on the table?",
-    "Is the green ribbon that originally tied the single bouquet absent or clearly not binding both groups together?",
-    "Does the lighting still come from the left side, casting shadows to the right?",
-    "Is the wooden table and window background preserved from the original scene?"
+    "Are there exactly two bouquets of roses on the wooden table?",
+    "Is each bouquet tied with a dark green satin ribbon?",
+    "Is the wooden table still visible with its rustic grain and scratches?",
+    "Is the window on the left side with natural light casting shadows?"
   ],
   "errors": [],
-  "summary": "The image successfully depicts two separate bouquets of red and pink roses on a wooden table with correct lighting and background preservation."
+  "summary": "The image correctly depicts two independent bouquets of roses on a wooden table with natural light from the left, fulfilling all checklist criteria."
 }
