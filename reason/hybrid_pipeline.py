@@ -99,6 +99,15 @@ def run_hybrid_pipeline(
     # Inject style anchor (smart: skips conflicting categories for transformative changes)
     scene_prompt = _inject_style_anchor(scene_prompt, reason, instruction)
 
+    # --- Post-processing: Fill critical gaps using the MLLM's own visual_cues ---
+    # These functions never hardcode assumptions about the image content.
+    # They look in the MLLM's visual_cues output first, then use conservative
+    # generic text only as a last resort.
+    visual_cues = reason.visual_cues or []
+    scene_prompt = _inject_person_age(scene_prompt, visual_cues)
+    scene_prompt = _inject_light_behavior(scene_prompt, visual_cues)
+    scene_prompt = _inject_room_geometry(scene_prompt, instruction, visual_cues)
+
     write_reason_files(reason, reason_context, scene_prompt, reasoning_dir)
 
     # Also copy original image to reasoning folder for reference
@@ -780,6 +789,202 @@ def _inject_style_anchor(scene_prompt: str, reason, instruction: str = "") -> st
 
     if anchor.lower() not in scene_prompt.lower():
         return f"{scene_prompt.rstrip('.')}. {anchor}"
+    return scene_prompt
+
+
+# ---------------------------------------------------------------------------
+# Post-processing: Fill critical gaps from visual_cues (no hardcoded assumptions)
+# ---------------------------------------------------------------------------
+
+# Indicators the scene_prompt already describes age for a person
+_AGE_ALREADY_PRESENT = ["years old", "year-old", "in his", "in her",
+                        "mid-20s", "20s", "30s", "40s", "50s",
+                        "young", "youthful", "middle-aged", "elderly",
+                        "teenager", "child", "kid", "adult", "aged"]
+
+# Indicators a person is present in the scene
+_HAS_PERSON = ["man", "woman", "boy", "girl", "lady",
+               "gentleman", "person", "child", "people"]
+
+# Indicators the scene_prompt already describes light quality well enough
+_LIGHT_QUALITY_DONE = ["shadow", "shadowless", "crisp", "sharp", "stark",
+                       "diffuse", "glare", "glossy", "highlight",
+                       "specular", "caustic", "refraction"]
+
+
+def _inject_person_age(scene_prompt: str, visual_cues: list[str] | None = None) -> str:
+    """Fallback: ensure person age is mentioned in the scene_prompt.
+
+    Strategy — never hardcode a specific age:
+    1. If scene_prompt already has age → skip.
+    2. If visual_cues contain a sentence mentioning age → extract and inject it.
+    3. Otherwise → inject a conservative note saying "age as originally depicted".
+    """
+    prompt_lower = scene_prompt.lower()
+
+    if any(kw in prompt_lower for kw in _AGE_ALREADY_PRESENT):
+        return scene_prompt
+
+    if not any(kw in prompt_lower for kw in _HAS_PERSON):
+        return scene_prompt
+
+    # Attempt to extract age description from visual_cues
+    cues = visual_cues or []
+    age_cues = [c for c in cues if any(kw in c.lower() for kw in [
+        "years old", "year-old", "in his", "in her",
+        "mid-20s", "20s", "30s", "40s", "50s",
+        "young", "youthful", "middle-aged", "elderly",
+        "teenager", "child", "baby", "adult", "aged",
+        "approximate age", "age",
+    ])]
+
+    if age_cues:
+        # Use the most complete age-relevant cue (strip leading category label)
+        best = max(age_cues, key=len)
+        stripped = re.sub(r"^[A-Za-z\s/]+:\s*", "", best).strip()
+        injection = f"Age reference: {stripped.rstrip('.')}."
+    else:
+        # Conservative fallback: no guess, just note fidelity to original
+        injection = (
+            "All persons appear at their exact age, skin texture, and facial features "
+            "as depicted in the original reference photograph, without any aging or "
+            "rejuvenation."
+        )
+
+    if injection.lower() not in prompt_lower:
+        sentences = [s.strip() for s in scene_prompt.rstrip(".").split(". ") if s.strip()]
+        if len(sentences) > 1:
+            sentences.insert(-1, injection)
+            scene_prompt = ". ".join(sentences) + "."
+        else:
+            scene_prompt = f"{scene_prompt.rstrip('.')} {injection}."
+        logger.info("Injected age reference into scene_prompt (source: visual_cues)" if age_cues
+                    else "Injected conservative age-fidelity note into scene_prompt")
+
+    return scene_prompt
+
+
+def _inject_light_behavior(scene_prompt: str, visual_cues: list[str] | None = None) -> str:
+    """Fallback: add light-behavior description if the scene_prompt lacks it.
+
+    Strategy — never assume shadow sharpness or specular presence:
+    1. If scene_prompt already describes light quality → skip.
+    2. Extract lighting-related sentences from visual_cues → inject them directly.
+    3. Last resort → describe only the light SOURCE and its NATURAL behavior.
+    """
+    prompt_lower = scene_prompt.lower()
+
+    if any(kw in prompt_lower for kw in _LIGHT_QUALITY_DONE):
+        return scene_prompt
+
+    cues = visual_cues or []
+
+    # Find light-related cues in the MLLM's own visual_cues output
+    light_keywords = ["lighting", "shadow", "sunlight", "daylight", "overcast",
+                      "diffuse", "bright", "dim", "illuminated", "glow"]
+    light_cues = [c for c in cues if any(kw in c.lower() for kw in light_keywords)]
+
+    if light_cues:
+        # Use the MLLM's own lighting description (strip leading category label)
+        best = max(light_cues, key=len)
+        stripped = re.sub(r"^[A-Za-z\s/]+:\s*", "", best).strip()
+        injection = f"Lighting: {stripped.rstrip('.')}."
+    else:
+        # Conservative: describe light source direction, not quality
+        has_window = "window" in prompt_lower
+        is_outdoor = any(kw in prompt_lower for kw in ["park", "sky", "trees", "landscape", "outdoor"])
+        if has_window:
+            injection = (
+                "Natural window light illuminates the scene, with light behavior "
+                "matching the original photograph's natural realism."
+            )
+        elif is_outdoor:
+            injection = (
+                "Natural daylight illuminates the scene from the sky, with light "
+                "behavior matching the original photograph."
+            )
+        else:
+            injection = (
+                "The scene is illuminated with natural light behavior, preserving "
+                "the original photograph's realistic shadow and highlight quality."
+            )
+
+    if injection.lower() not in prompt_lower:
+        sentences = [s.strip() for s in scene_prompt.rstrip(".").split(". ") if s.strip()]
+        if len(sentences) > 1:
+            sentences.insert(-1, injection)
+            scene_prompt = ". ".join(sentences) + "."
+        else:
+            scene_prompt = f"{scene_prompt.rstrip('.')} {injection}."
+        logger.info("Injected light behavior into scene_prompt (source: visual_cues)" if light_cues
+                    else "Injected generic light behavior into scene_prompt")
+
+    return scene_prompt
+
+
+def _inject_room_geometry(scene_prompt: str, instruction: str,
+                          visual_cues: list[str] | None = None) -> str:
+    """Fallback: ensure room boundaries are described for indoor scenes.
+
+    Strategy — never assume corner position:
+    1. Only for indoor scenes.
+    2. If scene_prompt already describes room boundaries (corner/edge/wall receding) → skip.
+    3. Extract spatial-position cues from visual_cues → inject them directly.
+    4. Last resort → generic note that the room is enclosed by walls.
+    """
+    prompt_lower = scene_prompt.lower()
+    instruction_lower = instruction.lower()
+
+    indoor_kw = ["room", "indoor", "window", "wall", "floor", "ceiling",
+                 "室内", "房间", "窗户", "墙", "墙壁"]
+    is_indoor = any(kw in prompt_lower for kw in indoor_kw) or \
+                any(kw in instruction_lower for kw in indoor_kw)
+    if not is_indoor:
+        return scene_prompt
+
+    # Check if geometry is already described
+    geo_done = ["corner where", "adjacent wall", "wall corner", "corner of",
+                "left wall", "right wall recedes", "left edge of the frame",
+                "right edge of the frame", "walls meet", "wall continues"]
+    if any(kw in prompt_lower for kw in geo_done):
+        return scene_prompt
+
+    cues = visual_cues or []
+
+    # Try to extract spatial-position cues
+    spatial_cues = [c for c in cues if any(kw in c.lower() for kw in [
+        "spatial position", "left", "right", "foreground", "background",
+        "corner", "wall", "window on",
+    ])]
+
+    if spatial_cues:
+        # Inject the most useful spatial cue (prefer one with "Spatial position")
+        spatial = [c for c in spatial_cues if "spatial position" in c.lower()]
+        if not spatial:
+            spatial = spatial_cues
+        best = max(spatial, key=len)
+        stripped = re.sub(r"^[A-Za-z\s/]+:\s*", "", best).strip()
+        injection = f"Spatial layout: {stripped.rstrip('.')}."
+    else:
+        # Conservative: room is enclosed, no assumption about corners
+        injection = (
+            "The room is enclosed by walls on both visible sides. The left and right "
+            "edges of the frame correspond to the physical boundaries of the room, "
+            "with wall surfaces occupying the periphery as in the original photograph."
+        )
+
+    if injection.lower() not in prompt_lower:
+        sentences_original = scene_prompt
+        sentences = [s.strip() for s in scene_prompt.rstrip(".").split(". ") if s.strip()]
+        if len(sentences) > 1:
+            sentences.insert(-1, injection)
+            scene_prompt = ". ".join(sentences) + "."
+        else:
+            scene_prompt = f"{scene_prompt.rstrip('.')} {injection}."
+        if scene_prompt != sentences_original:
+            logger.info("Injected room geometry into scene_prompt (source: visual_cues)" if spatial_cues
+                        else "Injected generic room geometry into scene_prompt")
+
     return scene_prompt
 
 

@@ -1,12 +1,11 @@
 {
-  "score": 0.75,
+  "score": 1.0,
   "passed": [
-    "Is the sky through the window dark with stars?",
-    "Is the room dimly lit with cool moonlight?",
-    "Is the leaf on the floor in the foreground slightly right of center?"
+    "Is the sky dark with stars visible through the window?",
+    "Is the room illuminated by soft moonlight creating blue shadows?",
+    "Is the green plant still in the white pot on the left windowsill?",
+    "Is the small green leaf still lying on the white floor to the right?"
   ],
-  "errors": [
-    "Plant pot is positioned in the center of the windowsill instead of the left side as specified"
-  ],
-  "summary": "The night-time scene is mostly correctly rendered, but the plant pot's position on the windowsill does not match the requirement."
+  "errors": [],
+  "summary": "The generated image accurately shows the room at night with dark sky, stars, moonlight, and all key objects preserved as specified."
 }

@@ -1,11 +1,11 @@
 {
   "score": 1.0,
   "passed": [
-    "Are the leaves on the trees red and yellow instead of green?",
-    "Is the ground covered with a layer of fallen leaves in red, yellow, and brown?",
-    "Is the East Asian man still standing in the center with the same clothing and smile?",
-    "Is the golden retriever dog sitting next to him with light golden fur?"
+    "Are the leaves on the trees predominantly red and yellow instead of green?",
+    "Is the ground covered with a layer of fallen leaves in autumn colors?",
+    "Is the man still present with the same East Asian appearance, light skin, young age, and clothing?",
+    "Is the golden retriever dog still sitting on the grass next to the man?"
   ],
   "errors": [],
-  "summary": "The autumnal transformation is correctly applied with all key elements present and matching."
+  "summary": "All main elements and autumn changes are correctly applied as per the instruction."
 }

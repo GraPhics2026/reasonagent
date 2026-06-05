@@ -17,6 +17,9 @@ from typing import Literal
 from .hybrid_pipeline import (
     _build_scene_prompt,
     _detect_transformative_change,
+    _inject_person_age,
+    _inject_light_behavior,
+    _inject_room_geometry,
     _inject_perspective_anchor,
     _inject_style_anchor,
     _validate_and_fix_scene_prompt,
@@ -321,6 +324,110 @@ class TestBuildScenePrompt:
         """Should mention preserved objects."""
         result = _build_scene_prompt(park_snow_reason, "如果下雪了", "test")
         assert "man" in result.lower() or "dog" in result.lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests for _inject_person_age
+# ---------------------------------------------------------------------------
+
+
+class TestInjectPersonAge:
+    """Tests for age injection fallback."""
+
+    def test_skips_when_age_already_present(self):
+        """Should not inject age if age-related terms already exist."""
+        prompt = "A young man in his 20s standing in a park."
+        result = _inject_person_age(prompt)
+        assert result == prompt
+
+    def test_injects_from_visual_cues(self):
+        """Should extract age from visual_cues when scene_prompt lacks it."""
+        prompt = "An East Asian man with light skin and dark hair stands in a park."
+        cues = ["The person is a young man in his mid-20s with smooth skin."]
+        result = _inject_person_age(prompt, cues)
+        assert "mid-20s" in result.lower()
+
+    def test_skips_when_no_person(self):
+        """Should skip when no person is in the prompt."""
+        prompt = "A beautiful landscape with mountains and a lake."
+        result = _inject_person_age(prompt)
+        assert result == prompt
+
+    def test_conservative_fallback_when_no_cues(self):
+        """When neither prompt nor cues have age, inject conservative note."""
+        prompt = "A Chinese woman with long black hair wearing a red dress."
+        result = _inject_person_age(prompt)
+        # Must NOT inject hardcoded "young" — only fidelity-to-original
+        assert "original reference photograph" in result
+        assert "young" not in result.lower()  # no age guess
+
+    def test_no_person_no_injection(self):
+        """No person keywords means no injection."""
+        prompt = "A vase of flowers on a wooden table."
+        result = _inject_person_age(prompt)
+        assert result == prompt
+
+
+# ---------------------------------------------------------------------------
+# Tests for _inject_light_behavior
+# ---------------------------------------------------------------------------
+
+
+class TestInjectLightBehavior:
+    """Tests for light behavior injection fallback."""
+
+    def test_skips_when_light_already_described(self):
+        """Should skip if shadow/highlight already described."""
+        prompt = "Crisp shadows fall across the floor. Glossy reflections gleam on the vase."
+        result = _inject_light_behavior(prompt)
+        assert result == prompt
+
+    def test_injects_from_visual_cues(self):
+        """Should extract lighting info from visual_cues when scene_prompt lacks it."""
+        prompt = "A room with a window letting in light."
+        cues = ["Lighting quality and direction: bright daylight from the left window, casting soft diagonal shadows."]
+        result = _inject_light_behavior(prompt, cues)
+        assert "soft diagonal shadows" in result.lower()
+
+    def test_generic_fallback_when_no_cues(self):
+        """When no visual_cues have lighting info, use generic description."""
+        prompt = "A park with trees and a lake."
+        result = _inject_light_behavior(prompt)
+        assert "daylight" in result.lower() or "natural light" in result.lower()
+
+
+# ---------------------------------------------------------------------------
+# Tests for _inject_room_geometry
+# ---------------------------------------------------------------------------
+
+
+class TestInjectRoomGeometry:
+    """Tests for room geometry injection fallback."""
+
+    def test_outdoor_scene_skipped(self):
+        """Outdoor scenes should not get room geometry injection."""
+        prompt = "A park with trees and a lake."
+        result = _inject_room_geometry(prompt, "如果下雪了")
+        assert result == prompt
+
+    def test_indoor_injects_from_visual_cues(self):
+        """Should extract spatial info from visual_cues for indoor scene."""
+        prompt = "A room with a large window. A plant sits on the windowsill."
+        cues = ["Spatial positions: window on the RIGHT wall, plant pot on the LEFT side of the windowsill."]
+        result = _inject_room_geometry(prompt, "如果变成深夜", cues)
+        assert "RIGHT wall" in result and "LEFT side" in result
+
+    def test_skips_when_geometry_already_described(self):
+        """Should skip if geometry is already described."""
+        prompt = "A room with a window on the right. The corner where the wall meets is visible on the left."
+        result = _inject_room_geometry(prompt, "如果变成深夜")
+        assert result == prompt
+
+    def test_indoor_prompt_triggers_even_with_outdoor_instruction(self):
+        """Indoor prompt words take priority over outdoor instruction for geometry."""
+        prompt = "A room with a window."
+        result = _inject_room_geometry(prompt, "如果下雪了")
+        assert result != prompt  # geometry was still injected (prompt says "room")
 
 
 # ---------------------------------------------------------------------------

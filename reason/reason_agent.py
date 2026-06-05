@@ -68,14 +68,47 @@ Include these style cues in your visual_cues list:
 CRITICAL — hybrid mode person identity preservation:
 Since T2I generates from scratch with no image reference, person appearance is ENTIRELY
 determined by the text description. T2I models have strong training bias toward
-Caucasian/white faces. To preserve the original person's identity, you MUST describe:
+Caucasian/white faces and default to older/generic ages. To preserve the original
+person's identity, you MUST describe:
 - Race/ethnicity: "East Asian man", "Chinese man", "Black woman" — NOT just "man"/"woman"
 - Skin tone: "light skin with warm undertone", "olive complexion", "dark brown skin"
+- APPROXIMATE AGE: "young man in his mid-20s", "middle-aged woman around 40",
+  "elderly man with wrinkles" — THIS IS CRITICAL. Without age, T2I defaults to older.
 - Facial features: "round face, almond-shaped eyes", "broad nose, full lips"
 - Hair: texture, color, style (e.g. "curly black hair", "straight dark brown hair")
 - Body build: "lean build", "stocky build", "tall and slender"
 These details MUST appear in both visual_cues AND scene_prompt. Without them, T2I will
-generate a completely different person with default Caucasian features.
+generate a completely different person with default Caucasian features and wrong age.
+
+CRITICAL — hybrid mode light behavior for photorealism:
+T2I models need explicit descriptions of light behavior to generate photorealistic results.
+Without these details, generated images look flat and lose ray-tracing quality. In your
+scene_prompt and visual_cues, ALWAYS describe:
+- Shadow sharpness: are shadows CRISP/SHARP (typical of direct sunlight) or SOFT/DIFFUSE
+  (typical of overcast or indirect light)? e.g. "crisp diagonal shadows of the window
+  frame cast across the floor"
+- Specular highlights: which surfaces have bright highlights? e.g. "bright specular
+  highlight on the glossy ceramic vase surface", "glare on the glass window pane"
+- Light caustics/refraction: if glass or water is present, describe any light patterns
+  e.g. "light caustics from the glass create patterned highlights on the table"
+Without shadow sharpness and highlight descriptions, T2I images lose their 3D depth
+and look flat/artificial. THIS IS THE #1 CAUSE OF LOST PHOTOREALISM.
+
+CRITICAL — hybrid mode room corner geometry for indoor scenes:
+For INDOOR SCENES, the T2I model MUST know what occupies each side of the frame.
+Ambiguous left/right boundaries cause the model to invent wide open spaces where
+there should be walls. In your scene_prompt and visual_cues, ALWAYS describe:
+- Where is the nearest WALL CORNER? Does the left side show a corner where two walls
+  meet, or does a single wall continue flat to the left edge?
+- What does the adjacent wall look like? Color, texture, any features (decorations,
+  windows, doors)?
+- Example: "The leftmost part of the frame shows the corner where the window wall
+  meets the adjacent wall at a 90-degree angle. The adjacent wall is painted the
+  same soft light blue matte finish and recedes toward the left."
+- Example: "The wall continues flat to the left edge of the frame with no corner
+  visible — it is a single uninterrupted wall surface."
+Without corner geometry, T2I imagines open space where there should be walls.
+THIS IS THE #1 CAUSE OF WRONG SPATIAL LAYOUT IN INDOOR IMAGES.
 
 CRITICAL for hybrid mode — scene_prompt is a STANDALONE T2I prompt:
 It will be sent directly to an image generator WITHOUT the original image.
