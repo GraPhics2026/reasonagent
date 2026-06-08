@@ -1,7 +1,33 @@
+# Python
 __pycache__/
 *.py[cod]
-config/.env
-genpilot/
-.venv
+*.pyc
+.pytest_cache/
+.venv/
+venv/
 .sisyphus
-.pytest_cache
+
+# Secrets / config
+config/.env
+
+# Third-party / external clones
+genpilot/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.idea/
+.vscode/
+*.swp
+
+# Pipeline runtime artifacts (regenerable)
+data/output/
+# ppt-master working tree
+projects/
+# ppt-master byproducts
+outputs/
+
+# Office lock files
+~$*
