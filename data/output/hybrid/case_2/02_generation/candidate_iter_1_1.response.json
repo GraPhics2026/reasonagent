@@ -1,0 +1,23 @@
+{
+  "output": {
+    "choices": [
+      {
+        "finish_reason": "stop",
+        "message": {
+          "content": [
+            {
+              "image": "https://dashscope-7c2c.oss-accelerate.aliyuncs.com/7d/22/20260605/51613171/26c5a365-3623-4956-8fe8-04f668685e60.png?Expires=1781269341&OSSAccessKeyId=LTAI5tPxpiCM2hjmWrFXrym1&Signature=jUSWckG66siPNJ2mnWj%2F3Ty1E4k%3D"
+            }
+          ],
+          "role": "assistant"
+        }
+      }
+    ]
+  },
+  "usage": {
+    "height": 1024,
+    "image_count": 1,
+    "width": 1024
+  },
+  "request_id": "7f5676fb-621a-9c8c-82df-0300d67ab237"
+}

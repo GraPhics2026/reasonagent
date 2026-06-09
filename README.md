@@ -191,17 +191,9 @@ pytest reason/test_hybrid_pipeline.py  # 36 passed (hybrid 7 层后处理)
 | 文件 | 内容 |
 |------|------|
 | [docs/对接说明.md](./docs/对接说明.md) | 各模块 API 对接细节、统一入口模板、Gradio 集成代码 |
-| [docs/答辩报告.md](./docs/答辩报告.md) | 完整答辩报告（10 章 53 节） |
+| [docs/报告.md](./docs/报告.md) | 完整报告 |
+| [docs/report.md](./docs/report.md) | 完整报告英文版 |
 | [docs/答辩.pptx](./docs/答辩.pptx) | 答辩 PPT（15 页） |
 | [docs/hybrid对比实验.md](./docs/hybrid对比实验.md) | hybrid vs edit vs gen 对比实验 |
 | [docs/ReasonGenPilot_开发计划.md](./docs/ReasonGenPilot_开发计划.md) | 项目精简版开发计划 |
 | [docs/ReasonGenPilot_四人分工.md](./docs/ReasonGenPilot_四人分工.md) | 成员分工与交付清单 |
-
-## GenPilot 集成（可选）
-
-```bash
-git clone https://github.com/27yw/GenPilot.git genpilot
-pip install -r genpilot/requirements.txt
-```
-
-后续可将当前轻量 prompt 优化逻辑替换为完整 GenPilot Stage 1/2，但保持 `run_gen_pipeline()` 接口不变。

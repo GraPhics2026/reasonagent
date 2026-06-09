@@ -23,7 +23,6 @@ Thumbs.db
 *.swp
 
 # Pipeline runtime artifacts (regenerable)
-data/output/
 # ppt-master working tree
 projects/
 # ppt-master byproducts

@@ -1,0 +1,5 @@
+Step 1: Observe key objects: a single bouquet of red and pink roses tied with a dark green ribbon on a rustic wooden table; a window with white frame on the left wall; a light-colored matte wall on the right; soft natural light from the left.
+
+Step 2: Infer the counterfactual change: the instruction 'split into two independent bouquets' requires dividing the flowers, stems, and ribbons into two separate bunches, each maintaining similar characteristics.
+
+Step 3: Derive expected visual outcome: two distinct bouquets on the same table, each with its own ribbon, while the table, window, wall, lighting, and flower types remain unchanged.

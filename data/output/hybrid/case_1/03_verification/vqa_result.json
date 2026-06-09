@@ -1,0 +1,11 @@
+{
+  "score": 1.0,
+  "passed": [
+    "Is the ground covered with snow?",
+    "Are there many people visible in the park?",
+    "Is the man still in the center with the dog to his right?",
+    "Are the benches and trees visible in the background with snow on them?"
+  ],
+  "errors": [],
+  "summary": "All key elements and counterfactual changes are correctly applied in the scene."
+}
