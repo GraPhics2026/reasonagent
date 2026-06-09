@@ -17,7 +17,7 @@
 | hybrid 通路（scene_prompt 7 层后处理） | 苏香广 | ✅ |
 | Router + 统一入口 + Gradio Demo + 答辩文档 | 艾博显 | ✅ |
 
-测试：**`pytest reason/` → 59 passed**（36 hybrid + 23 router）。
+测试：**`pytest reason/` → 67 passed**（44 hybrid + 23 router）。
 
 ## 目录结构
 
@@ -168,9 +168,9 @@ python scripts/run_comparison.py --real-api --cases 1,2  # 指定用例
 ## 测试
 
 ```bash
-pytest reason/                # 59 passed in 0.05s
+pytest reason/                # 67 passed in 0.05s
 pytest reason/test_router.py  # 23 passed (Router 单测)
-pytest reason/test_hybrid_pipeline.py  # 36 passed (hybrid 7 层后处理)
+pytest reason/test_hybrid_pipeline.py  # 44 passed (hybrid 7 层后处理)
 ```
 
 ## 与 ReasonBrain 论文的对比

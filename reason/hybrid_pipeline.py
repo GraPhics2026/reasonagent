@@ -104,7 +104,7 @@ def run_hybrid_pipeline(
     # They look in the MLLM's visual_cues output first, then use conservative
     # generic text only as a last resort.
     visual_cues = reason.visual_cues or []
-    scene_prompt = _inject_person_age(scene_prompt, visual_cues)
+    scene_prompt = _inject_person_identity(scene_prompt, visual_cues)
     scene_prompt = _inject_light_behavior(scene_prompt, visual_cues)
     scene_prompt = _inject_room_geometry(scene_prompt, instruction, visual_cues)
 
@@ -796,15 +796,51 @@ def _inject_style_anchor(scene_prompt: str, reason, instruction: str = "") -> st
 # Post-processing: Fill critical gaps from visual_cues (no hardcoded assumptions)
 # ---------------------------------------------------------------------------
 
-# Indicators the scene_prompt already describes age for a person
-_AGE_ALREADY_PRESENT = ["years old", "year-old", "in his", "in her",
-                        "mid-20s", "20s", "30s", "40s", "50s",
-                        "young", "youthful", "middle-aged", "elderly",
-                        "teenager", "child", "kid", "adult", "aged"]
+# Identity dimensions that T2I models have strong training bias on.
+# Each dimension maps to keywords that indicate the scene_prompt already
+# describes it. If missing, the T2I model will default to its training bias
+# (Caucasian, generic age, default body type, etc.).
+_PERSON_IDENTITY_KEYWORDS: dict[str, list[str]] = {
+    "race_ethnicity": [
+        "east asian", "chinese", "japanese", "korean", "asian",
+        "black", "african", "african american", "caucasian", "white",
+        "hispanic", "latino", "latina", "middle eastern", "south asian",
+        "indian", "mixed race", "ethnicity", "race",
+    ],
+    "skin_tone": [
+        "skin tone", "skin color", "complexion",
+        "fair skin", "light skin", "olive skin", "tan skin", "brown skin",
+        "dark skin", "pale skin", "warm undertone", "cool undertone",
+    ],
+    "age": [
+        "years old", "year-old", "in his", "in her",
+        "mid-20s", "20s", "30s", "40s", "50s", "60s",
+        "young", "youthful", "middle-aged", "elderly",
+        "teenager", "child", "kid", "adult", "aged",
+        "baby", "infant", "toddler", "approximate age",
+    ],
+    "hair": [
+        "hair", "hairstyle", "bald", "shaved head",
+        "black hair", "brown hair", "blonde", "red hair", "gray hair",
+        "white hair", "curly", "straight", "wavy", "braided", "ponytail",
+        "short hair", "long hair", "bangs", "fringe",
+    ],
+    "body_build": [
+        "build", "body type", "physique", "slender", "lean", "athletic",
+        "stocky", "muscular", "slim", "thin", "petite", "tall", "short",
+        "average build", "heavy build", "well-built",
+    ],
+    "facial_features": [
+        "face shape", "round face", "oval face", "square face",
+        "almond-shaped eyes", "almond eyes", "monolid",
+        "broad nose", "narrow nose", "freckles", "beard", "mustache",
+        "eyebrows", "eyelashes", "jawline", "cheekbones", "lips",
+    ],
+}
 
 # Indicators a person is present in the scene
 _HAS_PERSON = ["man", "woman", "boy", "girl", "lady",
-               "gentleman", "person", "child", "people"]
+               "gentleman", "person", "child", "people", "baby"]
 
 # Indicators the scene_prompt already describes light quality well enough
 _LIGHT_QUALITY_DONE = ["shadow", "shadowless", "crisp", "sharp", "stark",
@@ -812,45 +848,72 @@ _LIGHT_QUALITY_DONE = ["shadow", "shadowless", "crisp", "sharp", "stark",
                        "specular", "caustic", "refraction"]
 
 
-def _inject_person_age(scene_prompt: str, visual_cues: list[str] | None = None) -> str:
-    """Fallback: ensure person age is mentioned in the scene_prompt.
+def _inject_person_identity(scene_prompt: str, visual_cues: list[str] | None = None) -> str:
+    """Ensure all person identity dimensions are described in the scene_prompt.
 
-    Strategy — never hardcode a specific age:
-    1. If scene_prompt already has age → skip.
-    2. If visual_cues contain a sentence mentioning age → extract and inject it.
-    3. Otherwise → inject a conservative note saying "age as originally depicted".
+    T2I models have strong training biases: they default to Caucasian/white
+    ethnicity, generic/older age, and non-specific body types. Without explicit
+    description in the prompt, the generated person will not match the original.
+
+    This function covers 6 identity dimensions:
+      race_ethnicity, skin_tone, age, hair, body_build, facial_features
+
+    Strategy — never guess or hardcode specific values:
+    1. No person in scene → skip.
+    2. For each dimension: if scene_prompt already describes it → skip.
+    3. If visual_cues contain relevant info → extract and queue for injection.
+    4. If injections exist → inject a "Person identity: ..." block.
+    5. If person exists but NO identity info in prompt NOR cues → inject a
+       conservative fidelity note (no guesses, just "as originally depicted").
+    6. If all dimensions already covered by prompt → return unchanged.
     """
     prompt_lower = scene_prompt.lower()
-
-    if any(kw in prompt_lower for kw in _AGE_ALREADY_PRESENT):
-        return scene_prompt
 
     if not any(kw in prompt_lower for kw in _HAS_PERSON):
         return scene_prompt
 
-    # Attempt to extract age description from visual_cues
     cues = visual_cues or []
-    age_cues = [c for c in cues if any(kw in c.lower() for kw in [
-        "years old", "year-old", "in his", "in her",
-        "mid-20s", "20s", "30s", "40s", "50s",
-        "young", "youthful", "middle-aged", "elderly",
-        "teenager", "child", "baby", "adult", "aged",
-        "approximate age", "age",
-    ])]
 
-    if age_cues:
-        # Use the most complete age-relevant cue (strip leading category label)
-        best = max(age_cues, key=len)
-        stripped = re.sub(r"^[A-Za-z\s/]+:\s*", "", best).strip()
-        injection = f"Age reference: {stripped.rstrip('.')}."
-    else:
-        # Conservative fallback: no guess, just note fidelity to original
+    # Step 1: check each dimension
+    prompt_covered: set[str] = set()
+    cue_injections: list[str] = []
+
+    for dim, keywords in _PERSON_IDENTITY_KEYWORDS.items():
+        if any(kw in prompt_lower for kw in keywords):
+            prompt_covered.add(dim)
+            continue
+        # Try to extract from visual_cues
+        dim_cues = [c for c in cues if any(kw in c.lower() for kw in keywords)]
+        if dim_cues:
+            best = max(dim_cues, key=len)
+            stripped = re.sub(r"^[A-Za-z\s/]+:\s*", "", best).strip()
+            cue_injections.append(stripped.rstrip("."))
+
+    # Deduplicate cue-based injections
+    unique_injections: list[str] = []
+    seen: set[str] = set()
+    for inj in cue_injections:
+        key = inj.lower()
+        if key not in seen:
+            unique_injections.append(inj)
+            seen.add(key)
+
+    # Step 2: decide action
+    if unique_injections:
+        injection = "Person identity: " + "; ".join(unique_injections[:6]) + "."
+    elif not prompt_covered:
+        # Person detected but NO identity info anywhere → conservative fallback
         injection = (
-            "All persons appear at their exact age, skin texture, and facial features "
-            "as depicted in the original reference photograph, without any aging or "
-            "rejuvenation."
+            "All persons appear at their exact identity attributes — including "
+            "ethnicity, skin tone, age, facial features, hair, and body build — "
+            "as depicted in the original reference photograph, without alteration."
         )
+    else:
+        # All dimensions already covered in prompt → nothing to do
+        return scene_prompt
 
+    # Step 3: inject
+    dims_found = prompt_covered | {f"from_cues({i})" for i, _ in enumerate(unique_injections)}
     if injection.lower() not in prompt_lower:
         sentences = [s.strip() for s in scene_prompt.rstrip(".").split(". ") if s.strip()]
         if len(sentences) > 1:
@@ -858,8 +921,10 @@ def _inject_person_age(scene_prompt: str, visual_cues: list[str] | None = None) 
             scene_prompt = ". ".join(sentences) + "."
         else:
             scene_prompt = f"{scene_prompt.rstrip('.')} {injection}."
-        logger.info("Injected age reference into scene_prompt (source: visual_cues)" if age_cues
-                    else "Injected conservative age-fidelity note into scene_prompt")
+        logger.info(
+            "Injected person identity into scene_prompt (dimensions: %s)",
+            ", ".join(sorted(prompt_covered)) if prompt_covered else "conservative fallback",
+        )
 
     return scene_prompt
 

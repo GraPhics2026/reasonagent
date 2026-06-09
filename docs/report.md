@@ -10,7 +10,7 @@
 
 ## Abstract
 
-Text-to-image models underperform on two task types: first, alignment with complex **descriptive prompts** (object counts, colors, spatial relations); second, **hypothetical instructions** (e.g., “what would happen if the ice melted”) that require image understanding and commonsense reasoning and cannot be executed directly. This project builds **ReasonGenPilot**—a training-free multi-route Agent system that orchestrates MLLMs and public T2I/Edit APIs to implement **gen** (GenPilot-style prompt optimization + text-to-image), **edit** (ReasonBrain-inspired HI-IE reasoning + Qwen-Image instruction editing + VQA closed loop), and **hybrid** (hypothetical full-scene regeneration). The system provides a unified entry point, Gradio Demo, and 59 unit tests; four end-to-end cases all achieve VQA = 1.0 under real APIs.
+Text-to-image models underperform on two task types: first, alignment with complex **descriptive prompts** (object counts, colors, spatial relations); second, **hypothetical instructions** (e.g., “what would happen if the ice melted”) that require image understanding and commonsense reasoning and cannot be executed directly. This project builds **ReasonGenPilot**—a training-free multi-route Agent system that orchestrates MLLMs and public T2I/Edit APIs to implement **gen** (GenPilot-style prompt optimization + text-to-image), **edit** (ReasonBrain-inspired HI-IE reasoning + Qwen-Image instruction editing + VQA closed loop), and **hybrid** (hypothetical full-scene regeneration). The system provides a unified entry point, Gradio Demo, and 67 unit tests; four end-to-end cases all achieve VQA = 1.0 under real APIs.
 
 **Code Link**: https://github.com/GraPhics2026/ReasonGenpilot
 
@@ -375,7 +375,7 @@ Relying only on Reason Agent’s `scene_prompt`, T2I often errs (fragmentation, 
 | 2 | `_ensure_instruction_elements` | Detect missing multi-element instruction parts (e.g., “many people + snow” missing “people”) and add them back |
 | 3 | `_inject_perspective_anchor` | Extract spatial positions from `visual_cues` to prevent T2I misplacing objects |
 | 4 | `_inject_style_anchor` | Inject color / material / lighting / atmosphere; intelligently skip conflicting categories for transformative scenes |
-| 5 | `_inject_person_age` | Add person age range to avoid random child / elderly outputs |
+| 5 | `_inject_person_identity` | **6-dimension coverage**: race/skin/age/hair/build/face, per-dimension detection & injection to prevent T2I default bias (Caucasian + random age + generic build) |
 | 6 | `_inject_light_behavior` | Inject light direction / hardness (e.g., cool moonlight through window) |
 | 7 | `_inject_room_geometry` | Room geometry cues (window position, floor tiles, etc.) |
 
@@ -392,7 +392,7 @@ Relying only on Reason Agent’s `scene_prompt`, T2I often errs (fragmentation, 
 | `TestInjectPerspectiveAnchor` | Viewpoint anchor |
 | `TestInjectStyleAnchor` | Style anchor (including conflict skip) |
 | `TestBuildScenePrompt` | Rebuild scene from visual_cues |
-| `TestInjectPersonAge` | Age completion |
+| `TestInjectPersonIdentity` | 6-dimension person identity injection (race/skin/age/hair/build/face) |
 | `TestInjectLightBehavior` | Light behavior |
 | `TestInjectRoomGeometry` | Room geometry |
 | `TestEdgeCases` | Edge cases |
@@ -580,9 +580,9 @@ Output: `data/output/e2e/auto_demo/image_after.png`
 ### 8.6 Full Unit Test Suite
 
 ```
-reason/test_hybrid_pipeline.py  ........  36 passed (Member 3)
+reason/test_hybrid_pipeline.py  ........  44 passed (Member 3)
 reason/test_router.py           ........  23 passed (Member 4)
-total                                     59 passed in 0.05s
+total                                     67 passed in 0.05s
 ```
 
 ---
@@ -614,7 +614,7 @@ ReasonGenPilot, without training any models, achieves the following using only M
 
 1. **Three complementary routes**: gen (description alignment) / edit (local counterfactual) / hybrid (full-scene counterfactual)
 2. **Unified interface and auto-routing**: One-line call via `pipeline.py --mode auto`, Router auto-decides
-3. **Complete engineering pipeline**: CLI + Gradio Web Demo + 59 unit tests + dry-run fallback
+3. **Complete engineering pipeline**: CLI + Gradio Web Demo + 67 unit tests + dry-run fallback
 4. **Reproducible experimental results**: All four end-to-end cases VQA = 1.0; Router 100% accurate on 17 benchmark cases
 
 Compared to the ReasonBrain paper approach, this project reproduces core HI-IE capability with **<1000 lines of Python + 4 prompt files**, and **additionally covers full-scene reconstruction**, a scenario unsupported by the paper (hybrid route).

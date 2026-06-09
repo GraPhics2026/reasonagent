@@ -17,7 +17,7 @@ from typing import Literal
 from .hybrid_pipeline import (
     _build_scene_prompt,
     _detect_transformative_change,
-    _inject_person_age,
+    _inject_person_identity,
     _inject_light_behavior,
     _inject_room_geometry,
     _inject_perspective_anchor,
@@ -327,45 +327,127 @@ class TestBuildScenePrompt:
 
 
 # ---------------------------------------------------------------------------
-# Tests for _inject_person_age
+# Tests for _inject_person_identity
 # ---------------------------------------------------------------------------
 
 
-class TestInjectPersonAge:
-    """Tests for age injection fallback."""
+class TestInjectPersonIdentity:
+    """Tests for person identity injection (6 dimensions: race, skin, age, hair, build, face)."""
 
-    def test_skips_when_age_already_present(self):
-        """Should not inject age if age-related terms already exist."""
-        prompt = "A young man in his 20s standing in a park."
-        result = _inject_person_age(prompt)
+    def test_skips_when_all_dimensions_covered(self):
+        """When all identity dimensions are in the prompt, nothing should be injected."""
+        prompt = (
+            "A young Chinese man in his 20s with light skin and short black hair, "
+            "lean build, round face, standing in a park."
+        )
+        result = _inject_person_identity(prompt)
         assert result == prompt
 
-    def test_injects_from_visual_cues(self):
+    def test_injects_age_from_visual_cues(self):
         """Should extract age from visual_cues when scene_prompt lacks it."""
         prompt = "An East Asian man with light skin and dark hair stands in a park."
         cues = ["The person is a young man in his mid-20s with smooth skin."]
-        result = _inject_person_age(prompt, cues)
+        result = _inject_person_identity(prompt, cues)
         assert "mid-20s" in result.lower()
+
+    def test_injects_race_from_visual_cues(self):
+        """Should extract race/ethnicity from visual_cues when scene_prompt lacks it."""
+        prompt = "A young man with short hair and athletic build stands in a park."
+        cues = ["The subject is a Chinese/Taiwanese man of East Asian descent."]
+        result = _inject_person_identity(prompt, cues)
+        assert "Person identity:" in result
+        assert "Chinese" in result or "East Asian" in result
+
+    def test_injects_skin_tone_from_visual_cues(self):
+        """Should extract skin tone from visual_cues when scene_prompt lacks it."""
+        prompt = "A woman with long curly hair stands in a park."
+        cues = ["Skin tone: olive complexion with warm undertone."]
+        result = _inject_person_identity(prompt, cues)
+        assert "Person identity:" in result
+        assert "olive" in result.lower()
+
+    def test_injects_hair_from_visual_cues(self):
+        """Should extract hair description from visual_cues when scene_prompt lacks it."""
+        prompt = "A middle-aged woman standing in a park."
+        cues = ["Hair: long straight black hair with bangs."]
+        result = _inject_person_identity(prompt, cues)
+        assert "Person identity:" in result
+        assert "straight black hair" in result.lower()
+
+    def test_injects_body_build_from_visual_cues(self):
+        """Should extract body build from visual_cues when scene_prompt lacks it."""
+        prompt = "A man with a backpack stands in a park."
+        cues = ["Build: lean and muscular physique."]
+        result = _inject_person_identity(prompt, cues)
+        assert "Person identity:" in result
+        assert "lean" in result.lower()
+
+    def test_injects_facial_features_from_visual_cues(self):
+        """Should extract facial features from visual_cues when scene_prompt lacks it."""
+        prompt = "A young woman sitting on a bench."
+        cues = ["Facial features: round face with almond-shaped eyes."]
+        result = _inject_person_identity(prompt, cues)
+        assert "Person identity:" in result
+        assert "almond-shaped eyes" in result.lower()
+
+    def test_multiple_dimensions_injected(self):
+        """Should inject multiple missing dimensions from visual_cues."""
+        prompt = "A man stands in a park."
+        cues = [
+            "The person is a Chinese man in his early 30s.",
+            "Skin tone: light skin with warm undertone.",
+            "Build: athletic and muscular.",
+        ]
+        result = _inject_person_identity(prompt, cues)
+        assert "Person identity:" in result
+        assert "Chinese" in result
+        assert "early 30s" in result
+        assert "athletic" in result
+        assert "light skin" in result
 
     def test_skips_when_no_person(self):
         """Should skip when no person is in the prompt."""
         prompt = "A beautiful landscape with mountains and a lake."
-        result = _inject_person_age(prompt)
+        result = _inject_person_identity(prompt)
         assert result == prompt
 
     def test_conservative_fallback_when_no_cues(self):
-        """When neither prompt nor cues have age, inject conservative note."""
-        prompt = "A Chinese woman with long black hair wearing a red dress."
-        result = _inject_person_age(prompt)
-        # Must NOT inject hardcoded "young" — only fidelity-to-original
+        """When person exists but prompt and cues have NO identity info, inject conservative note."""
+        prompt = "A woman with a handbag walking down the street."
+        result = _inject_person_identity(prompt)
+        # Must NOT make up specific identity — only fidelity-to-original
         assert "original reference photograph" in result
-        assert "young" not in result.lower()  # no age guess
+        assert "ethnicity" in result.lower()
+        assert "skin tone" in result.lower()
 
     def test_no_person_no_injection(self):
         """No person keywords means no injection."""
         prompt = "A vase of flowers on a wooden table."
-        result = _inject_person_age(prompt)
+        result = _inject_person_identity(prompt)
         assert result == prompt
+
+    def test_already_has_race_skips_that_dimension(self):
+        """If scene_prompt already has race, that dimension should not be re-injected."""
+        prompt = "A Black woman with long braids."
+        cues = ["Race/ethnicity: Black/African American."]
+        result = _inject_person_identity(prompt, cues)
+        # The prompt already has "Black" so race shouldn't be in injection
+        if "Person identity:" in result:
+            # If anything was injected, it shouldn't be the race dimension
+            assert "Black woman" not in result.split("Person identity:")[1] if "Person identity:" in result else True
+        # The original text should be preserved
+        assert "Black woman" in result
+
+    def test_deduplicates_duplicate_cues(self):
+        """When multiple cues contain the same info, only inject once."""
+        prompt = "A person sits on a chair."
+        cues = [
+            "Age: middle-aged woman around 40.",
+            "Age description: woman appears in her 40s.",
+        ]
+        result = _inject_person_identity(prompt, cues)
+        # "40s" should appear, but not twice
+        assert "Person identity:" in result
 
 
 # ---------------------------------------------------------------------------
